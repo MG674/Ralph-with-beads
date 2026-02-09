@@ -29,8 +29,9 @@ RUN apt-get update && apt-get install -y \
 # Install Claude Code
 RUN curl -fsSL https://claude.ai/install | sh
 
-# Install Beads task management
-RUN npm install -g beads
+# Install Node.js tools: Beads task management + Playwright for UI testing
+RUN npm install -g beads playwright \
+    && npx playwright install --with-deps chromium
 
 # Install Python development tools
 RUN pip3 install --break-system-packages \
@@ -39,10 +40,6 @@ RUN pip3 install --break-system-packages \
     ruff \
     black \
     mypy
-
-# Install Playwright and browsers for UI testing
-RUN npm install -g playwright
-RUN npx playwright install --with-deps chromium
 
 # Set up working directory
 WORKDIR /workspace

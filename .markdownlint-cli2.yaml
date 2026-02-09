@@ -5,3 +5,13 @@ config:
   MD024: false
   # Allow inline HTML (used in some prompts/templates)
   MD033: false
+  # Blanks around headings — templates use compact heading+list style
+  MD022: false
+  # Blanks around lists — same compact style throughout docs
+  MD032: false
+  # Blanks around fences — code blocks in numbered steps
+  MD031: false
+  # Fenced code language — some blocks are pseudocode/output with no language
+  MD040: false
+  # List indentation — sub-lists under lettered steps use 3-space indent
+  MD007: false
