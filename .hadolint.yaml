@@ -1,0 +1,5 @@
+ignored:
+  # Dev tools — pinning npm globals adds maintenance burden for no real benefit
+  - DL3016
+  # Consecutive RUNs are kept separate for logical grouping and cache layers
+  - DL3059

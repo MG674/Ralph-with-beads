@@ -3,6 +3,7 @@
 You are working on [PROJECT_NAME].
 
 ## Context Files
+
 @CLAUDE.md
 @prd.md
 
@@ -11,14 +12,16 @@ You are working on [PROJECT_NAME].
 Run `bd ready --json` to check for unblocked tasks.
 
 If NO ready tasks exist:
-  - Run `bd list` to check overall status
-  - If ALL tasks are closed, output <promise>COMPLETE</promise>
-  - If tasks exist but are blocked, output <promise>BLOCKED</promise> with explanation
-  - STOP HERE - do not proceed to Step 2
+
+- Run `bd list` to check overall status
+- If ALL tasks are closed, output <promise>COMPLETE</promise>
+- If tasks exist but are blocked, output <promise>BLOCKED</promise> with explanation
+- STOP HERE - do not proceed to Step 2
 
 ## STEP 2: SELECT AND EXECUTE ONE TASK
 
 If ready tasks exist:
+
 1. Select the highest-priority ready task
 2. Read the task description and any parent epic context
 3. Read docs/guardrails.md for rules to follow
@@ -27,14 +30,17 @@ If ready tasks exist:
 ## STEP 3: IMPLEMENT WITH TDD
 
 a. **RED**: Write a failing test that captures the acceptance criteria
+
    - Run the test to confirm it fails
    - If it passes, your test is wrong or the feature exists
 
 b. **GREEN**: Write the minimum code to make the test pass
+
    - No more than necessary
    - Don't anticipate future needs
 
 c. **REFACTOR**: Clean up while tests stay green
+
    - Follow coding-standards.md
    - Remove duplication
    - Improve names
@@ -42,12 +48,14 @@ c. **REFACTOR**: Clean up while tests stay green
 ## STEP 4: VERIFY QUALITY
 
 Run `./verify.sh` which executes:
+
 - Lint check
 - Format check  
 - Type check (if applicable)
 - Full test suite
 
 If ANY check fails:
+
 - Fix the issues
 - Run verify.sh again
 - Do NOT proceed until all checks pass
@@ -62,6 +70,7 @@ e. If you learned something useful, append to docs/lessons-learned.md
 f. If you hit a problem that wasted time, add a guardrail to docs/guardrails.md
 
 ## Rules
+
 - ONLY work on ONE task per iteration
 - Quality over speed - small steps compound into big progress
 - Always run verify.sh before closing a task

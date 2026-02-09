@@ -59,9 +59,11 @@
 - [Quantifiable criteria where possible]
 
 ## Risks & Mitigations
+
 | Risk | Impact | Likelihood | Mitigation |
 |------|--------|------------|------------|
 | [Risk description] | High/Med/Low | High/Med/Low | [How to address] |
 
 ## Open Questions
+
 - [ ] [Question that needs answering before/during implementation]
