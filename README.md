@@ -65,4 +65,4 @@ A complete workflow for autonomous AI-driven development combining:
 
 ## License
 
-GPL-3.0 — See [LICENSE](LICENSE)
+MIT — See [LICENSE](LICENSE)
