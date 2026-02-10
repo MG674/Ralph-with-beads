@@ -60,7 +60,15 @@ If ANY check fails:
 - Run verify.sh again
 - Do NOT proceed until all checks pass
 
-## STEP 5: COMPLETE THE TASK
+## STEP 5: SELF-AUDIT
+
+Before closing the task, re-read the bead description and confirm every requirement in it is met:
+
+- Compare your implementation against each element of the task description
+- If any requirement is not addressed, fix it now (return to Step 3)
+- Only proceed to Step 6 when all requirements are satisfied
+
+## STEP 6: COMPLETE THE TASK
 
 a. Update task status: `bd update <id> in_progress` → work → `bd close <id> "what was done"`
 b. Record discovered work: `bd create "..." bug|feature <priority>`
