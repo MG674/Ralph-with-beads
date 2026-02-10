@@ -248,7 +248,27 @@ Before converting to beads, review each user story:
 3. **Is it small enough?** Can it be completed in a single Ralph iteration (ideally <30 minutes of work)?
 4. **Are dependencies explicit?** What must be done first?
 
-### 4.4 Beads Generation
+### 4.4 Plan Mode Exploration
+
+Before the first Ralph iteration on a new feature, use Claude Code's **Plan Mode** (Shift+Tab) to let the agent explore the codebase in read-only mode. This catches problems before any code is written.
+
+**What to do:**
+
+1. Start a Claude Code session with the PRD loaded
+2. Switch to Plan Mode (Shift+Tab)
+3. Ask Claude to:
+   - Explore the codebase and identify relevant existing patterns
+   - Flag ambiguities or contradictions in the PRD
+   - Suggest which files will need to change
+   - Identify risks or unknowns
+4. Review the output and refine the PRD if needed
+5. Switch back to execution mode (Shift+Tab again) only when satisfied
+
+**Why this matters:** Plan Mode restricts the agent to read-only analysis — it can't write code or run commands. This prevents premature implementation based on misunderstood requirements. It's especially valuable when working with an unfamiliar codebase or a complex feature.
+
+> **Source:** [How to write a good spec for AI agents](https://addyosmani.com/blog/good-spec/) — Addy Osmani
+
+### 4.5 Beads Generation
 
 Convert the PRD into beads tasks:
 
@@ -332,7 +352,15 @@ If ANY check fails:
 - Run verify.sh again
 - Do NOT proceed until all checks pass
 
-## STEP 5: COMPLETE THE TASK
+## STEP 5: SELF-AUDIT
+
+Before closing the task, re-read the bead description and confirm every requirement in it is met:
+
+- Compare your implementation against each element of the task description
+- If any requirement is not addressed, fix it now (return to Step 3)
+- Only proceed to Step 6 when all requirements are satisfied
+
+## STEP 6: COMPLETE THE TASK
 
 a. Update task status: `bd update <id> in_progress` → work → `bd close <id> "what was done"`
 b. Record discovered work: `bd create "..." bug|feature <priority>`
