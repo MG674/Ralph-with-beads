@@ -60,6 +60,12 @@ If ANY check fails:
 - Run verify.sh again
 - Do NOT proceed until all checks pass
 
+If you cannot fix the failures after genuine effort:
+
+- Output `<verify-fail>one-line summary of the failure</verify-fail>`
+- Document what you tried in docs/lessons-learned.md
+- Do NOT close the task — leave it in_progress for the next iteration
+
 ## STEP 5: SELF-AUDIT
 
 Before closing the task, re-read the bead description and confirm every requirement in it is met:

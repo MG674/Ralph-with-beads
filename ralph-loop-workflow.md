@@ -352,6 +352,11 @@ If ANY check fails:
 - Run verify.sh again
 - Do NOT proceed until all checks pass
 
+If you cannot fix the failures after genuine effort:
+- Output `<verify-fail>one-line summary of the failure</verify-fail>`
+- Document what you tried in docs/lessons-learned.md
+- Do NOT close the task — leave it in_progress for the next iteration
+
 ## STEP 5: SELF-AUDIT
 
 Before closing the task, re-read the bead description and confirm every requirement in it is met:
@@ -837,9 +842,14 @@ Use this once the foundation is solid and tasks are well-defined.
 #!/bin/bash
 set -e
 
-# Usage: ./ralph-afk.sh /path/to/project [max-iterations] [prompt-file]
+# Usage: ./ralph-afk.sh /path/to/project <max-iterations> [prompt-file]
 PROJECT_DIR="${1:-.}"
-MAX_ITERATIONS="${2:-10}"
+if [ -z "$2" ]; then
+    echo "Usage: ./ralph-afk.sh <project-dir> <max-iterations> [prompt-file]"
+    echo "  max-iterations is required (e.g. 10, 15, 30)"
+    exit 1
+fi
+MAX_ITERATIONS="$2"
 PROMPT_FILE="${3:-$PROJECT_DIR/prompt.md}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOG_FILE="$PROJECT_DIR/ralph-runs/ralph-$TIMESTAMP.log"
@@ -868,6 +878,8 @@ BRANCH_NAME="ralph/afk-$TIMESTAMP"
 git checkout -b "$BRANCH_NAME"
 echo "Created branch: $BRANCH_NAME" | tee -a "$LOG_FILE"
 
+PREV_FAIL=""
+
 for ((i=1; i<=$MAX_ITERATIONS; i++)); do
     echo "--- Iteration $i of $MAX_ITERATIONS ---" | tee -a "$LOG_FILE"
     echo "Time: $(date)" | tee -a "$LOG_FILE"
@@ -887,11 +899,11 @@ for ((i=1; i<=$MAX_ITERATIONS; i++)); do
         echo "" | tee -a "$LOG_FILE"
         echo "=== RALPH COMPLETE after $i iterations ===" | tee -a "$LOG_FILE"
         echo "Finished: $(date)" | tee -a "$LOG_FILE"
-        
+
         # Push branch for PR
         echo "Pushing branch for PR..." | tee -a "$LOG_FILE"
         git push -u origin "$BRANCH_NAME"
-        
+
         echo "" | tee -a "$LOG_FILE"
         echo "Create PR at: https://github.com/[org]/[repo]/pull/new/$BRANCH_NAME" | tee -a "$LOG_FILE"
 
@@ -913,6 +925,25 @@ for ((i=1; i<=$MAX_ITERATIONS; i++)); do
         exit 1
     fi
 
+    # Check for thrashing (same verify failure in consecutive iterations)
+    CURRENT_FAIL=$(echo "$RESULT" | grep -oP '(?<=<verify-fail>).*(?=</verify-fail>)' | tail -1)
+
+    if [ -n "$CURRENT_FAIL" ] && [ "$CURRENT_FAIL" = "$PREV_FAIL" ]; then
+        echo "" | tee -a "$LOG_FILE"
+        echo "=== RALPH THRASHING — same failure in 2 consecutive iterations ===" | tee -a "$LOG_FILE"
+        echo "Failure: $CURRENT_FAIL" | tee -a "$LOG_FILE"
+        echo "Finished: $(date)" | tee -a "$LOG_FILE"
+
+        # Push whatever progress was made
+        git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE" || true
+
+        if [ -f "$(dirname $0)/notify.sh" ]; then
+            bash "$(dirname $0)/notify.sh" "Ralph THRASHING on $(basename $PROJECT_DIR) at iteration $i: $CURRENT_FAIL"
+        fi
+        exit 1
+    fi
+    PREV_FAIL="${CURRENT_FAIL:-}"
+
     echo "Iteration $i complete." | tee -a "$LOG_FILE"
     echo "" | tee -a "$LOG_FILE"
 
@@ -930,6 +961,8 @@ if [ -f "$(dirname $0)/notify.sh" ]; then
     bash "$(dirname $0)/notify.sh" "Ralph finished on $(basename $PROJECT_DIR) — max iterations reached"
 fi
 ```
+
+**Thrashing detection:** The AFK script tracks `<verify-fail>` signals emitted by the agent (see Step 4 in prompt.md). If the same failure message appears in two consecutive iterations, Ralph stops with a `THRASHING` signal — this prevents wasting iterations on a problem the agent can't solve autonomously. The branch is pushed and a notification sent so a human can investigate.
 
 ---
 
