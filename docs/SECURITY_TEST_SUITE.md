@@ -84,7 +84,7 @@ echo $?
 **Procedure:**
 
 ```bash
-docker run --rm --memory=1g ralph-claude-test:latest python3 -c "
+docker run --rm --memory=4g ralph-claude-test:latest python3 -c "
 import array
 try:
     a = array.array('d', range(1000000000))

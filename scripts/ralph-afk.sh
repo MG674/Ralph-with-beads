@@ -227,22 +227,19 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
 
         # Check for repeating patterns
         THRASH_MSG=$(detect_thrashing "${FAIL_HISTORY[@]}")
-        if [ $? -eq 0 ] 2>/dev/null; then
-            # Re-check since we captured output
-            if detect_thrashing "${FAIL_HISTORY[@]}" > /dev/null 2>&1; then
-                echo "" | tee -a "$LOG_FILE"
-                echo "=== RALPH THRASHING — $THRASH_MSG ===" | tee -a "$LOG_FILE"
-                echo "Failure history: ${FAIL_HISTORY[*]}" | tee -a "$LOG_FILE"
-                echo "Finished: $(date)" | tee -a "$LOG_FILE"
+        if [ $? -eq 0 ]; then
+            echo "" | tee -a "$LOG_FILE"
+            echo "=== RALPH THRASHING — $THRASH_MSG ===" | tee -a "$LOG_FILE"
+            echo "Failure history: ${FAIL_HISTORY[*]}" | tee -a "$LOG_FILE"
+            echo "Finished: $(date)" | tee -a "$LOG_FILE"
 
-                # Push whatever progress was made
-                git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE" || true
+            # Push whatever progress was made
+            git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE" || true
 
-                if [ -f "$(dirname "$0")/notify.sh" ]; then
-                    bash "$(dirname "$0")/notify.sh" "Ralph THRASHING on $(basename "$PROJECT_DIR") at iteration $i: $THRASH_MSG"
-                fi
-                exit 1
+            if [ -f "$(dirname "$0")/notify.sh" ]; then
+                bash "$(dirname "$0")/notify.sh" "Ralph THRASHING on $(basename "$PROJECT_DIR") at iteration $i: $THRASH_MSG"
             fi
+            exit 1
         fi
     fi
 
