@@ -50,6 +50,23 @@ read_json_key() {
         || python -c "import json,sys; print(json.dumps(json.load(open(sys.argv[1]))[sys.argv[2]]))" "$file" "$key"
 }
 
+# Merge required status checks into branch protection JSON
+merge_status_checks() {
+    local base_json="$1"
+    python3 -c "
+import json, sys
+data = json.loads(sys.argv[1])
+data['required_status_checks'] = {'strict': True, 'contexts': ['lint-and-test']}
+print(json.dumps(data))
+" "$base_json" 2>/dev/null \
+    || python -c "
+import json, sys
+data = json.loads(sys.argv[1])
+data['required_status_checks'] = {'strict': True, 'contexts': ['lint-and-test']}
+print(json.dumps(data))
+" "$base_json"
+}
+
 # Copy a template file with diff/skip/overwrite handling for existing files
 copy_template() {
     local src="$1" dest="$2" label="$3"
@@ -372,10 +389,19 @@ if [ -n "$REPO_FULL" ]; then
             || echo "  $(yellow 'SKIP') Could not apply repo settings (check permissions)"
     fi
 
-    # Branch protection
+    # Branch protection (combined with status checks)
     echo ""
     if confirm "  Set up branch protection on main?" "Y"; then
         PROTECTION=$(read_json_key "$DEFAULTS" "branch_protection")
+
+        # Offer status checks if a CI workflow was configured
+        if [ "$LANGUAGE" != "other" ]; then
+            echo ""
+            if confirm "  Enable required status checks (lint-and-test)?" "Y"; then
+                PROTECTION=$(merge_status_checks "$PROTECTION")
+            fi
+        fi
+
         gh api "repos/$REPO_FULL/branches/main/protection" -X PUT --input - <<< "$PROTECTION" > /dev/null 2>&1 \
             && echo "  $(green 'OK') Branch protection applied" \
             || echo "  $(yellow 'SKIP') Could not apply branch protection (main branch may not exist yet)"
@@ -396,40 +422,10 @@ else
     echo "  $(yellow 'SKIP') Could not determine repo — settings not applied"
 fi
 
-# --- Step 8: Required Status Checks ------------------------------------------
-
-if [ "$LANGUAGE" != "other" ] && [ -n "$REPO_FULL" ]; then
-    echo ""
-    echo "$(bold 'Step 8: Required Status Checks')"
-    echo ""
-    echo "  CI workflow is now configured."
-    if confirm "  Enable required status checks on main (lint-and-test)?" "Y"; then
-        gh api "repos/$REPO_FULL/branches/main/protection" -X PUT \
-            --input - <<'EOF' > /dev/null 2>&1
-{
-  "required_status_checks": {
-    "strict": true,
-    "contexts": ["lint-and-test"]
-  },
-  "required_pull_request_reviews": {
-    "required_approving_review_count": 0
-  },
-  "enforce_admins": false,
-  "restrictions": null
-}
-EOF
-        if [ $? -eq 0 ]; then
-            echo "  $(green 'OK') Required status checks enabled"
-        else
-            echo "  $(yellow 'SKIP') Could not set status checks (main branch may not exist yet)"
-        fi
-    fi
-fi
-
-# --- Step 9: Initial Commit & Push -------------------------------------------
+# --- Step 8: Initial Commit & Push -------------------------------------------
 
 echo ""
-echo "$(bold 'Step 9: Initial Commit')"
+echo "$(bold 'Step 8: Initial Commit')"
 echo ""
 
 # Check if there are changes to commit
