@@ -41,3 +41,43 @@ jobs:
 
       - name: Tests
         run: pytest --tb=short -q
+
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pip-audit bandit safety
+
+      - name: Audit dependencies (pip-audit)
+        run: pip-audit --desc --skip-editable
+        continue-on-error: true
+
+      - name: Audit dependencies (safety)
+        run: safety check --json
+        continue-on-error: true
+
+      - name: Security code scan (bandit)
+        run: bandit -r src/ -f json -o bandit-report.json || true
+        continue-on-error: true
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+
+      - name: Fail if critical vulnerabilities
+        run: pip-audit --fail-exit-code 64
