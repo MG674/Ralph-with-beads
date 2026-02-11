@@ -13,26 +13,94 @@ fi
 MAX_ITERATIONS="$2"
 PROMPT_FILE="${3:-$PROJECT_DIR/prompt.md}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-LOG_FILE="$PROJECT_DIR/ralph-runs/ralph-$TIMESTAMP.log"
 
-if [ ! -f "$PROMPT_FILE" ]; then
-    echo "ERROR: prompt.md not found at $PROMPT_FILE"
+# --- Input Validation ---
+
+# Validate PROJECT_DIR
+if [ ! -d "$PROJECT_DIR" ]; then
+    echo "ERROR: Directory not found: $PROJECT_DIR"
     exit 1
 fi
 
+if [ ! -d "$PROJECT_DIR/.git" ]; then
+    echo "ERROR: Not a git repository: $PROJECT_DIR"
+    exit 1
+fi
+
+# Convert relative paths to absolute
+if [[ ! "$PROJECT_DIR" = /* && "$PROJECT_DIR" != "." ]]; then
+    PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
+fi
+
+# Validate PROMPT_FILE exists
+if [ ! -f "$PROMPT_FILE" ]; then
+    echo "ERROR: Prompt file not found: $PROMPT_FILE"
+    exit 1
+fi
+
+# Convert prompt file to absolute path
+if [[ ! "$PROMPT_FILE" = /* ]]; then
+    PROMPT_FILE="$(cd "$(dirname "$PROMPT_FILE")" && pwd)/$(basename "$PROMPT_FILE")"
+fi
+
+# Validate max-iterations is a positive integer
+if ! [[ "$MAX_ITERATIONS" =~ ^[0-9]+$ ]] || [ "$MAX_ITERATIONS" -lt 1 ]; then
+    echo "ERROR: max-iterations must be a positive integer, got: $MAX_ITERATIONS"
+    exit 1
+fi
+
+# --- Credential Validation ---
+# Supports both Max subscription (OAuth via .credentials.json) and API key auth
+
+CLAUDE_CREDENTIALS="$HOME/.claude/.credentials.json"
+CLAUDE_CONFIG="$HOME/.claude/config.json"
+if [ ! -f "$CLAUDE_CREDENTIALS" ] && [ ! -f "$CLAUDE_CONFIG" ] && [ -z "$CLAUDE_API_KEY" ]; then
+    echo "ERROR: Claude credentials not found."
+    echo "  Expected one of:"
+    echo "    - $CLAUDE_CREDENTIALS (Max/Pro subscription — run 'claude login')"
+    echo "    - $CLAUDE_CONFIG (API key config)"
+    echo "    - CLAUDE_API_KEY environment variable"
+    exit 1
+fi
+
+LOG_FILE="$PROJECT_DIR/ralph-runs/ralph-$TIMESTAMP.log"
 mkdir -p "$PROJECT_DIR/ralph-runs"
+chmod 700 "$PROJECT_DIR/ralph-runs"
 
 echo "=== RALPH AFK — $MAX_ITERATIONS iterations ===" | tee "$LOG_FILE"
 echo "Project: $PROJECT_DIR" | tee -a "$LOG_FILE"
 echo "Started: $(date)" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
+# --- Container Cleanup Trap ---
+
+CONTAINER_ID=""
+cleanup() {
+    local exit_code=$?
+    if [ -n "$CONTAINER_ID" ]; then
+        echo "Cleaning up container: $CONTAINER_ID" | tee -a "$LOG_FILE"
+        docker kill "$CONTAINER_ID" 2>/dev/null || true
+    fi
+    exit $exit_code
+}
+trap cleanup EXIT INT TERM
+
 cd "$PROJECT_DIR"
 
-# Sync from remote before starting
+# --- Sync from Remote ---
+
 echo "Syncing from remote..." | tee -a "$LOG_FILE"
-git fetch origin 2>/dev/null || echo "Note: Could not fetch from origin" | tee -a "$LOG_FILE"
-git pull --rebase origin main 2>/dev/null || echo "Note: Could not pull from origin/main" | tee -a "$LOG_FILE"
+if ! git fetch origin 2>&1 | tee -a "$LOG_FILE"; then
+    echo "ERROR: Failed to fetch from origin" | tee -a "$LOG_FILE"
+    echo "Check your network connection and Git credentials." | tee -a "$LOG_FILE"
+    exit 1
+fi
+
+if ! git pull --rebase origin main 2>&1 | tee -a "$LOG_FILE"; then
+    echo "WARNING: Could not pull from origin/main" | tee -a "$LOG_FILE"
+    echo "You may be on a different branch or have unpushed commits." | tee -a "$LOG_FILE"
+    echo "Continuing anyway..." | tee -a "$LOG_FILE"
+fi
 
 # Create feature branch
 BRANCH_NAME="ralph/afk-$TIMESTAMP"
@@ -40,19 +108,74 @@ git checkout -b "$BRANCH_NAME"
 echo "Created branch: $BRANCH_NAME" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
-PREV_FAIL=""
+# --- Advanced Thrashing Detection ---
 
-for ((i=1; i<=$MAX_ITERATIONS; i++)); do
+declare -a FAIL_HISTORY=()
+
+detect_thrashing() {
+    local -a history=("$@")
+    local len=${#history[@]}
+
+    if (( len < 3 )); then return 1; fi
+
+    # Pattern A: Same failure 3 consecutive times
+    if [[ "${history[-1]}" == "${history[-2]}" ]] && \
+       [[ "${history[-2]}" == "${history[-3]}" ]]; then
+        echo "Same failure in 3 consecutive iterations"
+        return 0
+    fi
+
+    # Pattern B: Alternating failures (A->B->A->B)
+    if (( len >= 4 )); then
+        if [[ "${history[-1]}" == "${history[-3]}" ]] && \
+           [[ "${history[-2]}" == "${history[-4]}" ]] && \
+           [[ "${history[-1]}" != "${history[-2]}" ]]; then
+            echo "Alternating failure pattern detected"
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+# --- Docker Args ---
+
+DOCKER_ARGS=(
+    --rm
+    --memory=4g
+    --cpus=2
+    --read-only
+    --tmpfs /tmp:rw,nosuid,nodev,noexec,size=1g
+    --tmpfs /run:rw,nosuid,nodev,noexec,size=256m
+    -v "$(pwd)":/workspace
+    -v "$PROMPT_FILE":/prompt.md:ro
+    -w /workspace
+)
+
+# Mount credentials securely (read-only, specific file only)
+# Max/Pro subscription: mount OAuth credentials
+if [ -f "$CLAUDE_CREDENTIALS" ]; then
+    DOCKER_ARGS+=(-v "$CLAUDE_CREDENTIALS:/home/claude/.claude/.credentials.json:ro")
+fi
+# API key config file
+if [ -f "$CLAUDE_CONFIG" ]; then
+    DOCKER_ARGS+=(-v "$CLAUDE_CONFIG:/home/claude/.claude/config.json:ro")
+fi
+# API key via environment variable
+if [ -n "$CLAUDE_API_KEY" ]; then
+    DOCKER_ARGS+=(-e CLAUDE_API_KEY="$CLAUDE_API_KEY")
+fi
+
+# --- Main Loop ---
+
+for ((i=1; i<=MAX_ITERATIONS; i++)); do
     echo "--- Iteration $i of $MAX_ITERATIONS ---" | tee -a "$LOG_FILE"
     echo "Time: $(date)" | tee -a "$LOG_FILE"
 
-    # Run Claude Code in Docker
-    RESULT=$(docker run --rm \
-        -v "$(pwd)":/workspace \
-        -v "$HOME/.claude:/root/.claude" \
-        -w /workspace \
+    # Run Claude Code in Docker with timeout
+    RESULT=$(timeout 600 docker run "${DOCKER_ARGS[@]}" \
         ralph-claude:latest \
-        -c "claude --dangerously-skip-permissions -p '\$(cat $PROMPT_FILE)'" \
+        -c "claude --dangerously-skip-permissions -p \"\$(cat /prompt.md)\"" \
         2>&1) || true
 
     echo "$RESULT" >> "$LOG_FILE"
@@ -62,17 +185,17 @@ for ((i=1; i<=$MAX_ITERATIONS; i++)); do
         echo "" | tee -a "$LOG_FILE"
         echo "=== RALPH COMPLETE after $i iterations ===" | tee -a "$LOG_FILE"
         echo "Finished: $(date)" | tee -a "$LOG_FILE"
-        
+
         # Push branch for PR
         echo "Pushing branch for PR..." | tee -a "$LOG_FILE"
         git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE"
-        
+
         echo "" | tee -a "$LOG_FILE"
         echo "Create PR at: https://github.com/[org]/[repo]/pull/new/$BRANCH_NAME" | tee -a "$LOG_FILE"
 
         # Send notification if script exists
-        if [ -f "$(dirname $0)/notify.sh" ]; then
-            bash "$(dirname $0)/notify.sh" "Ralph COMPLETE on $(basename $PROJECT_DIR) after $i iterations"
+        if [ -f "$(dirname "$0")/notify.sh" ]; then
+            bash "$(dirname "$0")/notify.sh" "Ralph COMPLETE on $(basename "$PROJECT_DIR") after $i iterations"
         fi
         exit 0
     fi
@@ -86,30 +209,42 @@ for ((i=1; i<=$MAX_ITERATIONS; i++)); do
         # Push whatever progress was made
         git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE" || true
 
-        if [ -f "$(dirname $0)/notify.sh" ]; then
-            bash "$(dirname $0)/notify.sh" "Ralph BLOCKED on $(basename $PROJECT_DIR) at iteration $i"
+        if [ -f "$(dirname "$0")/notify.sh" ]; then
+            bash "$(dirname "$0")/notify.sh" "Ralph BLOCKED on $(basename "$PROJECT_DIR") at iteration $i"
         fi
         exit 1
     fi
 
-    # Check for thrashing (same verify failure in consecutive iterations)
+    # Extract current failure for thrashing detection
     CURRENT_FAIL=$(echo "$RESULT" | grep -oP '(?<=<verify-fail>).*(?=</verify-fail>)' | tail -1)
 
-    if [ -n "$CURRENT_FAIL" ] && [ "$CURRENT_FAIL" = "$PREV_FAIL" ]; then
-        echo "" | tee -a "$LOG_FILE"
-        echo "=== RALPH THRASHING — same failure in 2 consecutive iterations ===" | tee -a "$LOG_FILE"
-        echo "Failure: $CURRENT_FAIL" | tee -a "$LOG_FILE"
-        echo "Finished: $(date)" | tee -a "$LOG_FILE"
-
-        # Push whatever progress was made
-        git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE" || true
-
-        if [ -f "$(dirname $0)/notify.sh" ]; then
-            bash "$(dirname $0)/notify.sh" "Ralph THRASHING on $(basename $PROJECT_DIR) at iteration $i: $CURRENT_FAIL"
+    # Track failure history (5-iteration sliding window)
+    if [ -n "$CURRENT_FAIL" ]; then
+        FAIL_HISTORY+=("$CURRENT_FAIL")
+        if (( ${#FAIL_HISTORY[@]} > 5 )); then
+            FAIL_HISTORY=("${FAIL_HISTORY[@]:(-5)}")
         fi
-        exit 1
+
+        # Check for repeating patterns
+        THRASH_MSG=$(detect_thrashing "${FAIL_HISTORY[@]}")
+        if [ $? -eq 0 ] 2>/dev/null; then
+            # Re-check since we captured output
+            if detect_thrashing "${FAIL_HISTORY[@]}" > /dev/null 2>&1; then
+                echo "" | tee -a "$LOG_FILE"
+                echo "=== RALPH THRASHING — $THRASH_MSG ===" | tee -a "$LOG_FILE"
+                echo "Failure history: ${FAIL_HISTORY[*]}" | tee -a "$LOG_FILE"
+                echo "Finished: $(date)" | tee -a "$LOG_FILE"
+
+                # Push whatever progress was made
+                git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE" || true
+
+                if [ -f "$(dirname "$0")/notify.sh" ]; then
+                    bash "$(dirname "$0")/notify.sh" "Ralph THRASHING on $(basename "$PROJECT_DIR") at iteration $i: $THRASH_MSG"
+                fi
+                exit 1
+            fi
+        fi
     fi
-    PREV_FAIL="${CURRENT_FAIL:-}"
 
     echo "Iteration $i complete." | tee -a "$LOG_FILE"
     echo "" | tee -a "$LOG_FILE"
@@ -125,6 +260,6 @@ echo "Finished: $(date)" | tee -a "$LOG_FILE"
 git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE" || true
 echo "Branch pushed. Create PR to review progress." | tee -a "$LOG_FILE"
 
-if [ -f "$(dirname $0)/notify.sh" ]; then
-    bash "$(dirname $0)/notify.sh" "Ralph finished on $(basename $PROJECT_DIR) — max iterations reached"
+if [ -f "$(dirname "$0")/notify.sh" ]; then
+    bash "$(dirname "$0")/notify.sh" "Ralph finished on $(basename "$PROJECT_DIR") — max iterations reached"
 fi

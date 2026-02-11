@@ -31,7 +31,6 @@ Everything lives in a dedicated repo so it can serve multiple projects.
 ```
 ralph-with-beads/
 ├── README.md                    # Quick-start guide
-├── ralph-loop-workflow.md       # This document
 ├── scripts/
 │   ├── bootstrap-project.sh     # Phase 0 automation (new project setup)
 │   ├── closeout-review.sh       # Phase 5 close-out diff review
@@ -56,6 +55,7 @@ ralph-with-beads/
 │   ├── planning-interview.md    # Questions for PRD creation
 │   └── beads-generation.md      # Prompt for converting PRD to beads
 └── docs/
+    ├── ralph-loop-workflow.md   # This document (workflow reference)
     ├── lessons-learned.md       # Accumulated learnings (agent-updated)
     └── guardrails.md            # "Signs" — rules added after failures
 ```
@@ -171,6 +171,109 @@ Every project repo uses Git from the start. Ralph commits after each task. Beads
 **Branch strategy:** Ralph works on a dedicated branch (e.g. `ralph/feature-name`). PR to main after successful run.
 
 **Key principle:** Git operations happen INSIDE the Docker container. The project directory is mounted as a volume, so commits persist to your local filesystem. After a successful Ralph run, you create a PR from outside the container.
+
+### 3.7 Credential Management & Security
+
+#### Credentials Used by Ralph Workflow
+
+Ralph requires three types of credentials:
+
+1. **Claude Code Authentication**
+   - Used by `claude` command inside Docker container
+   - **Max/Pro subscription (recommended):** OAuth token at `~/.claude/.credentials.json` — run `claude login` to authenticate
+   - **API key:** `~/.claude/config.json` or `CLAUDE_API_KEY` environment variable
+   - Rotation: Max/Pro tokens refresh automatically; API keys rotated via Anthropic dashboard
+
+2. **GitHub Token**
+   - Used for `gh` CLI (repository operations)
+   - Stored in `~/.config/gh/hosts.yml`
+   - Scope: Repo creation, branch management, PR operations
+   - Rotation: Via GitHub Settings > Developer Settings > Personal access tokens
+   - Permissions needed: `repo`, `workflow`
+
+3. **SSH Key (for git operations)**
+   - Used for git commit signing (optional but recommended)
+   - Location: `~/.ssh/id_ed25519` (optional)
+   - Scope: Commit signing/verification
+   - Rotation: Generate new key, update GitHub SSH keys
+
+#### How Credentials Are Isolated
+
+The Docker container has limited access to credentials:
+
+- **Claude credentials:** Mounted read-only (`.credentials.json` for Max/Pro, `config.json` for API key)
+- **GitHub token:** Inside container, `gh` uses cached credentials from git config
+- **SSH key:** NOT mounted into container (commits use git author config only)
+
+The container **cannot**:
+- Modify credential files (mounted read-only)
+- Access the host filesystem beyond `/workspace` and `/tmp`
+- Read `~/.ssh/` directory
+- Read `~/.config/git/` directory
+- Steal credentials for other services
+
+#### Credential Handling in ralph-hitl.sh and ralph-afk.sh
+
+```bash
+# Max/Pro subscription (OAuth credentials)
+docker run ... \
+    -v "$HOME/.claude/.credentials.json:/home/claude/.claude/.credentials.json:ro" \
+    ...
+
+# API key (alternative)
+docker run ... \
+    -v "$HOME/.claude/config.json:/home/claude/.claude/config.json:ro" \
+    ...
+```
+
+The `:ro` flag makes the mount read-only, preventing modification. Scripts auto-detect which auth method is available and mount the appropriate file.
+
+Scripts check for credentials at startup and fail with a clear error if none of `.credentials.json`, `config.json`, or `CLAUDE_API_KEY` is available.
+
+#### If a Container is Compromised
+
+Even if an attacker gains shell access inside the container, they can:
+- Read Claude auth token from credentials file (read-only)
+- Use Claude CLI to make API calls
+
+They **cannot**:
+- Modify git config to add credentials
+- Access GitHub token (not mounted)
+- Access SSH keys (not mounted)
+- Escape container (AppArmor policy prevents it)
+
+**Recovery procedure:**
+1. Stop Ralph immediately: `Ctrl+C`
+2. Kill the container: `docker kill <container-id>`
+3. Re-authenticate: run `claude login` (Max/Pro) or rotate API key (Anthropic dashboard)
+4. Review recent commits: `git log --oneline -20`
+5. Audit file changes: `git diff main`
+
+#### Best Practices
+
+- **Rotate credentials regularly** — Monthly for long-running projects
+- **Use minimal-privilege tokens** — GitHub token should only have required scopes
+- **Review commits before merging** — Always read PR diffs, never auto-merge
+- **Monitor git logs** — Use `git log --author` to verify commits came from Ralph
+- **Keep Ralph updated** — Pull latest changes from ralph-with-beads repo
+
+#### Environment Variables (Alternative to Mounted Files)
+
+For CI/CD environments, use environment variables instead of mounted files:
+
+```bash
+export CLAUDE_API_KEY="sk-..."
+docker run ... \
+    -e CLAUDE_API_KEY \
+    ...
+```
+
+Then inside container:
+```bash
+claude config set api-key "$CLAUDE_API_KEY"
+```
+
+This approach is more suitable for GitHub Actions, Jenkins, etc.
 
 ---
 
