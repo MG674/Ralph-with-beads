@@ -11,6 +11,7 @@ set -e
 # =============================================================================
 
 RALPH_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+GEMINI_INSTALL_ID="96380478"
 
 # --- Helpers -----------------------------------------------------------------
 
@@ -42,6 +43,13 @@ prompt_input() {
     fi
 }
 
+# Read a top-level key from a JSON file, output as JSON string
+read_json_key() {
+    local file="$1" key="$2"
+    python3 -c "import json,sys; print(json.dumps(json.load(open(sys.argv[1]))[sys.argv[2]]))" "$file" "$key" 2>/dev/null \
+        || python -c "import json,sys; print(json.dumps(json.load(open(sys.argv[1]))[sys.argv[2]]))" "$file" "$key"
+}
+
 # Copy a template file with diff/skip/overwrite handling for existing files
 copy_template() {
     local src="$1" dest="$2" label="$3"
@@ -56,14 +64,14 @@ copy_template() {
         fi
         echo ""
         echo "  $(yellow 'DIFF') $label — existing file differs from template:"
-        diff --color=auto -u "$dest" "$src" || true
+        diff -u "$dest" "$src" || true
         echo ""
         while true; do
             read -r -p "  [S]kip / [O]verwrite / [D]iff again? " choice
             case "$choice" in
                 [Ss]) echo "  Skipped $label"; return ;;
                 [Oo]) cp "$src" "$dest"; echo "  $(green 'Overwritten') $label"; return ;;
-                [Dd]) diff --color=auto -u "$dest" "$src" || true ;;
+                [Dd]) diff -u "$dest" "$src" || true ;;
                 *) echo "  Please enter S, O, or D" ;;
             esac
         done
@@ -318,7 +326,14 @@ echo "$(bold 'Step 5: Placeholder Substitution')"
 for file in CLAUDE.md prompt.md; do
     if [ -f "$file" ]; then
         if grep -q '\[PROJECT_NAME\]' "$file" 2>/dev/null; then
-            sed -i "s|\[PROJECT_NAME\]|$PROJECT_NAME|g" "$file"
+            python3 -c "
+import sys
+with open(sys.argv[1], 'r') as f:
+    content = f.read()
+content = content.replace('[PROJECT_NAME]', sys.argv[2])
+with open(sys.argv[1], 'w') as f:
+    f.write(content)
+" "$file" "$PROJECT_NAME"
             echo "  Updated $file: [PROJECT_NAME] -> $PROJECT_NAME"
         fi
     fi
@@ -351,17 +366,7 @@ if [ -n "$REPO_FULL" ]; then
         echo "  Applying repository settings (squash merge, auto-delete branches)..."
 
         # Extract and apply repository settings
-        REPO_SETTINGS=$(python3 -c "
-import json, sys
-with open('$DEFAULTS') as f:
-    d = json.load(f)
-print(json.dumps(d['repository']))
-" 2>/dev/null || python -c "
-import json, sys
-with open('$DEFAULTS') as f:
-    d = json.load(f)
-print(json.dumps(d['repository']))
-")
+        REPO_SETTINGS=$(read_json_key "$DEFAULTS" "repository")
         gh api "repos/$REPO_FULL" -X PATCH --input - <<< "$REPO_SETTINGS" > /dev/null 2>&1 \
             && echo "  $(green 'OK') Repository settings applied" \
             || echo "  $(yellow 'SKIP') Could not apply repo settings (check permissions)"
@@ -370,17 +375,7 @@ print(json.dumps(d['repository']))
     # Branch protection
     echo ""
     if confirm "  Set up branch protection on main?" "Y"; then
-        PROTECTION=$(python3 -c "
-import json, sys
-with open('$DEFAULTS') as f:
-    d = json.load(f)
-print(json.dumps(d['branch_protection']))
-" 2>/dev/null || python -c "
-import json, sys
-with open('$DEFAULTS') as f:
-    d = json.load(f)
-print(json.dumps(d['branch_protection']))
-")
+        PROTECTION=$(read_json_key "$DEFAULTS" "branch_protection")
         gh api "repos/$REPO_FULL/branches/main/protection" -X PUT --input - <<< "$PROTECTION" > /dev/null 2>&1 \
             && echo "  $(green 'OK') Branch protection applied" \
             || echo "  $(yellow 'SKIP') Could not apply branch protection (main branch may not exist yet)"
@@ -392,7 +387,7 @@ print(json.dumps(d['branch_protection']))
         echo "  Attempting to add repo to Gemini Code Assist..."
         REPO_ID=$(gh api "repos/$REPO_FULL" --jq '.id' 2>/dev/null || true)
         if [ -n "$REPO_ID" ]; then
-            gh api "user/installations/96380478/repositories/$REPO_ID" -X PUT > /dev/null 2>&1 \
+            gh api "user/installations/${GEMINI_INSTALL_ID}/repositories/$REPO_ID" -X PUT > /dev/null 2>&1 \
                 && echo "  $(green 'OK') Added to Gemini Code Assist" \
                 || echo "  $(yellow 'SKIP') Gemini Code Assist — may already cover all repos"
         fi
