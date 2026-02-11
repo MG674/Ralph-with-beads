@@ -15,15 +15,10 @@ A complete workflow for autonomous AI-driven development combining:
 
 1. **Set up a new project:**
    ```bash
-   cd your-project
-   bd init                              # Initialize Beads
-   cp templates/CLAUDE.md ./CLAUDE.md   # Copy and customize
-   cp templates/prompt.md ./prompt.md   # Copy and customize
-   cp templates/verify-python.sh ./verify.sh  # Or verify-javascript.sh
-   chmod +x verify.sh
-   mkdir -p docs
-   cp docs/guardrails.md ./docs/
-   cp docs/lessons-learned.md ./docs/
+   # Automated (recommended)
+   ./scripts/bootstrap-project.sh
+
+   # Or manual setup — see ralph-loop-workflow.md Phase 0
    ```
 
 2. **Build the Docker image:**
@@ -53,7 +48,8 @@ A complete workflow for autonomous AI-driven development combining:
 
 - **[ralph-loop-workflow.md](ralph-loop-workflow.md)** — Complete workflow documentation
 - **[templates/](templates/)** — Template files for new projects
-- **[scripts/](scripts/)** — Ralph execution scripts
+- **[templates/closeout-checklist.md](templates/closeout-checklist.md)** — Project close-out checklist
+- **[scripts/](scripts/)** — Ralph execution scripts (bootstrap, close-out, HITL, AFK)
 - **[prompts/](prompts/)** — Prompts for planning and task generation
 
 ## Key Resources
