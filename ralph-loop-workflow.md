@@ -33,6 +33,8 @@ ralph-with-beads/
 ├── README.md                    # Quick-start guide
 ├── ralph-loop-workflow.md       # This document
 ├── scripts/
+│   ├── bootstrap-project.sh     # Phase 0 automation (new project setup)
+│   ├── closeout-review.sh       # Phase 5 close-out diff review
 │   ├── ralph-hitl.sh            # Human-in-the-loop (single iteration)
 │   ├── ralph-afk.sh             # AFK loop (N iterations, Docker)
 │   └── notify.sh                # Completion notification (optional)
@@ -40,7 +42,14 @@ ralph-with-beads/
 │   ├── prompt.md                # The Ralph prompt template
 │   ├── CLAUDE.md                # Project-level agent instructions template
 │   ├── coding-standards.md      # Code style and conventions
-│   └── prd-template.md          # PRD template for new features
+│   ├── prd-template.md          # PRD template for new features
+│   ├── LICENSE-proprietary.txt  # VM General Services / Ergofigure license
+│   ├── repo-defaults.json       # GitHub repo settings (merge strategy, etc.)
+│   ├── gitignore-python         # .gitignore template for Python projects
+│   ├── gitignore-javascript     # .gitignore template for JS/Node projects
+│   ├── ci-python.yml            # GitHub Actions CI for Python
+│   ├── ci-javascript.yml        # GitHub Actions CI for JavaScript
+│   └── closeout-checklist.md    # Project close-out checklist
 ├── docker/
 │   └── Dockerfile               # Claude Code Docker image config
 ├── prompts/
@@ -964,11 +973,58 @@ fi
 
 **Thrashing detection:** The AFK script tracks `<verify-fail>` signals emitted by the agent (see Step 4 in prompt.md). If the same failure message appears in two consecutive iterations, Ralph stops with a `THRASHING` signal — this prevents wasting iterations on a problem the agent can't solve autonomously. The branch is pushed and a notification sent so a human can investigate.
 
+### 9.3 bootstrap-project.sh — Project Bootstrap (Phase 0)
+
+Automates all Phase 0 project initialisation. Interactive script that handles:
+
+1. **Project identity** — name, description, new vs existing repo
+2. **GitHub setup** — org selection (fetched dynamically from API), visibility, license confirmation
+3. **Language selection** — Python, JavaScript, or "other" (skips language-specific files)
+4. **File scaffolding** — copies templates with diff/skip/overwrite for existing files
+5. **Placeholder substitution** — replaces `[PROJECT_NAME]` in CLAUDE.md and prompt.md
+6. **CI/CD** — copies language-specific GitHub Actions workflow
+7. **Repo settings** — applies merge strategy, branch protection, Gemini Code Assist (for VM-General-Services-Ltd repos)
+8. **Status checks** — optionally requires CI to pass before merging
+9. **Initial commit** — commits and pushes all scaffolded files
+
+```bash
+# Run from anywhere — script auto-detects ralph-with-beads location
+./scripts/bootstrap-project.sh
+```
+
+Existing repos are accepted as local paths, GitHub URLs (`https://github.com/owner/repo`), or `owner/repo` shorthand. Existing files get a diff prompt rather than being silently skipped or overwritten.
+
+### 9.4 closeout-review.sh — Project Close-out Review (Phase 5)
+
+Lightweight diff script for project close-out:
+
+1. **Agent-recorded learnings** — diffs project's `docs/guardrails.md` and `docs/lessons-learned.md` against framework versions. These files are updated by Ralph agents during each iteration (prompt.md Steps 6e/6f).
+2. **Template drift** — checks if `coding-standards.md`, `CLAUDE.md`, `prompt.md` have diverged from framework templates.
+3. **Close-out checklist** — prints the full checklist from `templates/closeout-checklist.md` as a reminder.
+
+```bash
+# Run from ralph-with-beads, pointing at the project
+./scripts/closeout-review.sh /path/to/project
+```
+
+The script does NOT auto-create PRs — the human decides what to promote to the framework.
+
 ---
 
 ## 10. The End-to-End Process
 
 ### Phase 0: Project Initialisation (One-Time)
+
+#### Option A: Bootstrap script (recommended)
+
+```bash
+# From ralph-with-beads directory
+./scripts/bootstrap-project.sh
+```
+
+The bootstrap script handles repo creation, org selection, license, scaffolding, CI, repo settings, and initial commit. See Section 9.3 for details.
+
+#### Option B: Manual setup
 
 ```
 1.  Create project repo on GitHub
@@ -1054,6 +1110,35 @@ bd ready                      # See what's next
 bv                            # Visual overview
 ```
 
+### Phase 5: Project Close-out (When Complete)
+
+When a project reaches completion or a major milestone, run the close-out process to feed learnings back into the framework.
+
+```
+1.  Run closeout-review.sh against the project
+      ./scripts/closeout-review.sh /path/to/project
+2.  Review all agent-recorded learnings (not just recent)
+3.  Decide what to promote vs keep project-specific
+4.  Branch ralph-with-beads, PR universal learnings
+5.  Review templates for improvement opportunities
+6.  Archive project repo if no further development
+```
+
+**Promote vs Keep:**
+
+| Promote to framework | Keep in project |
+|---------------------|-----------------|
+| Universal coding patterns | Project-specific API quirks |
+| Common failure modes | Business-domain rules |
+| Workflow improvements | Technology-specific configs |
+| Template gaps discovered | One-off debugging notes |
+
+**Note on agent learnings:** Ralph agents update `docs/lessons-learned.md` and `docs/guardrails.md` during each iteration (prompt.md Steps 6e/6f). The close-out review should cover ALL entries accumulated over the project lifetime, not just recent ones.
+
+**Gemini Code Assist:** For VM-General-Services-Ltd repos, Gemini Code Assist is automatically configured by the bootstrap script (or is available org-wide). It provides AI-powered code review on PRs.
+
+See `templates/closeout-checklist.md` for the full structured checklist.
+
 ---
 
 ## 11. Do We Need progress.txt?
@@ -1128,10 +1213,8 @@ Cross-reference with [11 Tips for AI Coding with Ralph Wiggum](https://www.aiher
 ## 14. Quick Reference Checklist
 
 **Starting a new project:**
-- [ ] Create repo, push to GitHub
-- [ ] `bd init`
-- [ ] Create CLAUDE.md, verify.sh, prompt.md
-- [ ] Create docs/lessons-learned.md and docs/guardrails.md
+- [ ] Run `./scripts/bootstrap-project.sh` (or manual Phase 0)
+- [ ] Review and customise CLAUDE.md
 - [ ] Run planning interview
 - [ ] Create PRD
 - [ ] Generate beads from PRD
@@ -1153,6 +1236,14 @@ Cross-reference with [11 Tips for AI Coding with Ralph Wiggum](https://www.aiher
 - [ ] Bead closed with message
 - [ ] Changes committed
 - [ ] Lessons/guardrails updated if needed
+
+**Closing out a project:**
+- [ ] Run `./scripts/closeout-review.sh /path/to/project`
+- [ ] Review ALL agent-recorded learnings
+- [ ] Promote universal learnings to framework (branch + PR)
+- [ ] Review templates for improvement opportunities
+- [ ] All beads closed, README updated
+- [ ] Archive repo if complete
 
 ---
 
