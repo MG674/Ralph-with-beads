@@ -1,0 +1,50 @@
+PROPRIETARY SOFTWARE LICENSE
+
+Copyright © 2025 VM General Services Ltd / Ergofigure Ltd
+All rights reserved.
+
+NOTICE
+------
+This software and associated documentation files (the "Software") are the
+proprietary and confidential property of VM General Services Ltd and
+Ergofigure Ltd (the "Company").
+
+RESTRICTIONS
+------------
+No part of the Software may be reproduced, distributed, transmitted,
+displayed, published, adapted, modified, reverse-engineered, decompiled,
+disassembled, or otherwise exploited in any form or by any means, electronic
+or mechanical, without the prior written permission of the Company.
+
+Unauthorised copying, distribution, or use of the Software, in whole or in
+part, is strictly prohibited.
+
+ACCESS AND USE
+--------------
+Access to the Software does not constitute a grant of any licence, right,
+or interest in the Software or any intellectual property contained therein,
+except as expressly set out in a separate written agreement with the Company.
+
+Any authorised use of the Software is subject to the terms and conditions of
+such written agreement.
+
+ATTRIBUTION
+-----------
+Algorithm: Dr. Lucy Bastin (v2.0)
+Implementation: Martin Gray
+Software Development: VM General Services Ltd
+
+DISCLAIMER
+----------
+THE SOFTWARE IS PROVIDED ON AN "AS IS" BASIS WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+
+IN NO EVENT SHALL THE COMPANY BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE
+USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+CONTACT
+-------
+For licensing enquiries, please contact VM General Services Ltd.
+marting@vmgeneralservices.co.uk
