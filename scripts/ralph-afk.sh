@@ -145,8 +145,8 @@ DOCKER_ARGS=(
     --memory=4g
     --cpus=2
     --read-only
-    --tmpfs /tmp:rw,nosuid,nodev,noexec,size=1g
-    --tmpfs /run:rw,nosuid,nodev,noexec,size=256m
+    --tmpfs "/tmp:rw,nosuid,nodev,noexec,size=1g"
+    --tmpfs "/run:rw,nosuid,nodev,noexec,size=256m"
     -v "$(pwd)":/workspace
     -v "$PROMPT_FILE":/prompt.md:ro
     -w /workspace
