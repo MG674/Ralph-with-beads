@@ -1015,7 +1015,7 @@ The script does NOT auto-create PRs — the human decides what to promote to the
 
 ### Phase 0: Project Initialisation (One-Time)
 
-**Option A: Bootstrap script (recommended)**
+#### Option A: Bootstrap script (recommended)
 
 ```bash
 # From ralph-with-beads directory
@@ -1024,7 +1024,7 @@ The script does NOT auto-create PRs — the human decides what to promote to the
 
 The bootstrap script handles repo creation, org selection, license, scaffolding, CI, repo settings, and initial commit. See Section 9.3 for details.
 
-**Option B: Manual setup**
+#### Option B: Manual setup
 
 ```
 1.  Create project repo on GitHub
