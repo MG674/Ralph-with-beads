@@ -46,20 +46,13 @@ prompt_input() {
 # Read a top-level key from a JSON file, output as JSON string
 read_json_key() {
     local file="$1" key="$2"
-    python3 -c "import json,sys; print(json.dumps(json.load(open(sys.argv[1]))[sys.argv[2]]))" "$file" "$key" 2>/dev/null \
-        || python -c "import json,sys; print(json.dumps(json.load(open(sys.argv[1]))[sys.argv[2]]))" "$file" "$key"
+    python3 -c "import json,sys; print(json.dumps(json.load(open(sys.argv[1]))[sys.argv[2]]))" "$file" "$key"
 }
 
 # Merge required status checks into branch protection JSON
 merge_status_checks() {
     local base_json="$1"
     python3 -c "
-import json, sys
-data = json.loads(sys.argv[1])
-data['required_status_checks'] = {'strict': True, 'contexts': ['lint-and-test']}
-print(json.dumps(data))
-" "$base_json" 2>/dev/null \
-    || python -c "
 import json, sys
 data = json.loads(sys.argv[1])
 data['required_status_checks'] = {'strict': True, 'contexts': ['lint-and-test']}
@@ -104,7 +97,7 @@ echo ""
 echo "$(bold '=== Ralph-with-beads Project Bootstrap ===')"
 echo ""
 
-for cmd in gh git; do
+for cmd in gh git python3; do
     if ! command -v "$cmd" &> /dev/null; then
         echo "$(red 'ERROR'): $cmd is not installed."
         exit 1
@@ -170,7 +163,13 @@ if [ "$MODE" = "new" ]; then
     done <<< "$ORGS"
 
     echo ""
-    OWNER_IDX=$(prompt_input "Select owner" "$DEFAULT_CHOICE")
+    while true; do
+        OWNER_IDX=$(prompt_input "Select owner" "$DEFAULT_CHOICE")
+        if [[ "$OWNER_IDX" =~ ^[0-9]+$ ]] && [ "$OWNER_IDX" -ge 1 ] && [ "$OWNER_IDX" -le "${#ORG_LIST[@]}" ]; then
+            break
+        fi
+        echo "  $(red 'Invalid selection.') Please enter a number from 1 to ${#ORG_LIST[@]}."
+    done
     OWNER="${ORG_LIST[$((OWNER_IDX - 1))]}"
     echo "  Owner: $OWNER"
 
@@ -193,13 +192,15 @@ if [ "$MODE" = "new" ]; then
         echo "    1) MIT"
         echo "    2) None (no license file)"
         echo "    3) Custom (provide path)"
-        LIC_CHOICE=$(prompt_input "  Select" "1")
-        case "$LIC_CHOICE" in
-            1) LICENSE_SRC="MIT" ;;
-            2) LICENSE_SRC="" ;;
-            3) LICENSE_SRC=$(prompt_input "  Path to license file") ;;
-            *) LICENSE_SRC="" ;;
-        esac
+        while true; do
+            LIC_CHOICE=$(prompt_input "  Select" "1")
+            case "$LIC_CHOICE" in
+                1) LICENSE_SRC="MIT"; break ;;
+                2) LICENSE_SRC=""; break ;;
+                3) LICENSE_SRC=$(prompt_input "  Path to license file"); break ;;
+                *) echo "  $(red 'Invalid choice.') Please enter 1, 2, or 3." ;;
+            esac
+        done
     fi
 
     # Create the repo
