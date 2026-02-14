@@ -48,8 +48,10 @@ if [[ "$CMD" == "reset" ]]; then
     done
 fi
 
-# Audit log
-echo "$(date '+%Y-%m-%d %H:%M:%S'): $USER executed: git $CMD $*" >> /var/log/git-commands.log 2>/dev/null || true
+# Audit log (file + stderr for persistence beyond container lifecycle)
+LOG_MSG="$(date '+%Y-%m-%d %H:%M:%S'): $USER executed: git $CMD $*"
+echo "$LOG_MSG" >> /var/log/git-commands.log 2>/dev/null
+echo "$LOG_MSG" >&2
 
 # Execute the real git command
 exec /usr/bin/git "$CMD" "$@"

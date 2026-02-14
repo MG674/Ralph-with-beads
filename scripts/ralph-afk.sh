@@ -156,6 +156,7 @@ DOCKER_ARGS=(
     --tmpfs "/run:rw,nosuid,nodev,size=256m"
     -v "$(pwd)":/workspace
     -v "$PROMPT_FILE":/prompt.md:ro
+    -v "$PROJECT_DIR/ralph-runs/git-audit.log":/var/log/git-commands.log
     -w /workspace
 )
 

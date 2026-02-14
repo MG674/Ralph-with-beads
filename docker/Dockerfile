@@ -40,25 +40,24 @@ RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
 # Install beads and playwright
 RUN npm install -g @beads/bd playwright
-USER root
-RUN npx playwright install --with-deps chromium
-USER node
 
-# Install Python dev tools
+# System-level installs (Playwright browsers + Python dev tools)
 USER root
-RUN pip3 install --break-system-packages \
-    pytest pytest-cov ruff black mypy
+RUN npx playwright install --with-deps chromium && \
+    pip3 install --no-cache-dir --break-system-packages \
+        pytest pytest-cov ruff black mypy
 
-# --- Security: Git wrapper (pre-tool-use hook) ---
-COPY git-wrapper.sh /usr/local/bin/git-wrapper.sh
-RUN chmod +x /usr/local/bin/git-wrapper.sh
+# --- Security: Git wrapper intercepts all git commands via PATH precedence ---
+# /usr/local/bin precedes /usr/bin in PATH, so this wrapper intercepts all git calls.
+# The wrapper validates commands then delegates to /usr/bin/git.
+COPY git-wrapper.sh /usr/local/bin/git
+RUN chmod +x /usr/local/bin/git
 RUN touch /var/log/git-commands.log && \
     chown node:node /var/log/git-commands.log
 
-# Git configuration
-RUN git config --system user.email "ralph@example.com" && \
-    git config --system user.name "Ralph Loop" && \
-    git config --system alias.git '!/usr/local/bin/git-wrapper.sh'
+# Git configuration (use real binary directly — wrapper is already in PATH)
+RUN /usr/bin/git config --system user.email "ralph@example.com" && \
+    /usr/bin/git config --system user.name "Ralph Loop"
 
 # Workspace and config directories
 RUN mkdir -p /workspace /home/node/.claude && \
