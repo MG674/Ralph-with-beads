@@ -74,6 +74,7 @@ fi
 LOG_FILE="$PROJECT_DIR/ralph-runs/ralph-$TIMESTAMP.log"
 mkdir -p "$PROJECT_DIR/ralph-runs"
 chmod 700 "$PROJECT_DIR/ralph-runs"
+touch "$PROJECT_DIR/ralph-runs/git-audit.log"
 
 echo "=== RALPH AFK — $MAX_ITERATIONS iterations ===" | tee "$LOG_FILE"
 echo "Project: $PROJECT_DIR" | tee -a "$LOG_FILE"
