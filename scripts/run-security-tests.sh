@@ -133,7 +133,7 @@ echo ""
 echo "$(bold '3. Timeout Test')"
 
 run_test_exit_code "Timeout kills hung process (5s)" 124 \
-    timeout 5 run_in_container "sleep 60"
+    timeout 5 docker run --rm "$DOCKER_IMAGE" -c "sleep 60"
 
 echo ""
 
