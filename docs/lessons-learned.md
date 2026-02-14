@@ -88,6 +88,20 @@ Accumulated wisdom from development. Consult when working on related areas.
 - Correct: `npm install -g @beads/bd` (the `bd` CLI)
 - Wrong: `npm install -g beads` (installs unrelated package)
 
+### Docker `--user` Flag and HOME
+- When using `--user 1000:1000` to override the container user, `HOME` may not be set correctly
+- Always pair with `-e HOME=/home/node` (or whatever the user's home is)
+- Without this, Claude Code can't find `~/.claude/` config
+
+### Token Persistence for Docker Auth
+- Save token to `~/.claude-oauth-token` file: `echo "$CLAUDE_CODE_OAUTH_TOKEN" > ~/.claude-oauth-token && chmod 600 ~/.claude-oauth-token`
+- Ralph scripts auto-load from this file if env var isn't set (survives SSH disconnects)
+- Also persist in `~/.bashrc` for interactive use
+
+### After Cloning Ralph Scripts
+- Scripts need `chmod +x` after cloning: `chmod +x scripts/ralph-hitl.sh scripts/ralph-afk.sh`
+- Git doesn't always preserve execute permissions across platforms
+
 ### SSH Sessions and Environment Variables
 - `export VAR=value` is lost when SSH disconnects
 - Always persist to `~/.bashrc` AND `~/.zshrc` (check `echo $SHELL` to confirm which is active)
