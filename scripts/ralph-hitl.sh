@@ -110,6 +110,7 @@ read
 
 # Persist git audit log on host (survives container --rm)
 mkdir -p "$PROJECT_DIR/ralph-runs"
+chmod 700 "$PROJECT_DIR/ralph-runs"
 touch "$PROJECT_DIR/ralph-runs/git-audit.log"
 
 DOCKER_ARGS=(
