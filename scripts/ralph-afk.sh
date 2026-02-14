@@ -39,6 +39,12 @@ if [[ ! "$PROJECT_DIR" = /* && "$PROJECT_DIR" != "." ]]; then
     PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
 fi
 
+# Validate max-iterations is a positive integer
+if ! [[ "$MAX_ITERATIONS" =~ ^[0-9]+$ ]] || [ "$MAX_ITERATIONS" -lt 1 ]; then
+    echo "ERROR: max-iterations must be a positive integer, got: $MAX_ITERATIONS"
+    exit 1
+fi
+
 # Validate PROMPT_FILE exists
 if [ ! -f "$PROMPT_FILE" ]; then
     echo "ERROR: Prompt file not found: $PROMPT_FILE"
@@ -48,12 +54,6 @@ fi
 # Convert prompt file to absolute path
 if [[ ! "$PROMPT_FILE" = /* ]]; then
     PROMPT_FILE="$(cd "$(dirname "$PROMPT_FILE")" && pwd)/$(basename "$PROMPT_FILE")"
-fi
-
-# Validate max-iterations is a positive integer
-if ! [[ "$MAX_ITERATIONS" =~ ^[0-9]+$ ]] || [ "$MAX_ITERATIONS" -lt 1 ]; then
-    echo "ERROR: max-iterations must be a positive integer, got: $MAX_ITERATIONS"
-    exit 1
 fi
 
 # --- Credential Validation ---
