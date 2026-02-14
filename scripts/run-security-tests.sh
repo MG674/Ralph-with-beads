@@ -27,6 +27,17 @@ run_in_container() {
 TESTS_PASSED=0
 TESTS_FAILED=0
 
+record_pass() {
+    echo "$(green 'PASS')"
+    ((++TESTS_PASSED))
+}
+
+record_fail() {
+    echo "$(red 'FAIL')"
+    echo "    $1"
+    ((++TESTS_FAILED))
+}
+
 run_test() {
     local name="$1"
     local expected="$2"
@@ -37,13 +48,10 @@ run_test() {
     output=$("$@" 2>&1) || true
 
     if [[ "$output" == *"$expected"* ]]; then
-        echo "$(green 'PASS')"
-        ((TESTS_PASSED++))
+        record_pass
     else
-        echo "$(red 'FAIL')"
-        echo "    Expected to contain: $expected"
-        echo "    Got: $(echo "$output" | head -3)"
-        ((TESTS_FAILED++))
+        record_fail "Expected to contain: $expected
+    Got: $(echo "$output" | head -3)"
     fi
 }
 
@@ -58,12 +66,9 @@ run_test_exit_code() {
     actual_code=$?
 
     if [ "$actual_code" -eq "$expected_code" ]; then
-        echo "$(green 'PASS')"
-        ((TESTS_PASSED++))
+        record_pass
     else
-        echo "$(red 'FAIL')"
-        echo "    Expected exit code: $expected_code, got: $actual_code"
-        ((TESTS_FAILED++))
+        record_fail "Expected exit code: $expected_code, got: $actual_code"
     fi
 }
 
