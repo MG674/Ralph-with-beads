@@ -76,6 +76,7 @@ Accumulated wisdom from development. Consult when working on related areas.
 6. **Set `CLAUDE_CONFIG_DIR`** env var to control where Claude writes config
 
 ### Claude Code Env Vars Reference
+
 | Variable | Purpose |
 |----------|---------|
 | `CLAUDE_CODE_OAUTH_TOKEN` | OAuth token auth (from `claude setup-token`) |

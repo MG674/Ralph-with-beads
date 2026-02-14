@@ -6,7 +6,8 @@ set -e
 # --- Load OAuth token from file if not in environment ---
 # Survives SSH disconnects without needing to re-source .bashrc
 if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ] && [ -f "$HOME/.claude-oauth-token" ]; then
-    export CLAUDE_CODE_OAUTH_TOKEN=$(cat "$HOME/.claude-oauth-token")
+    CLAUDE_CODE_OAUTH_TOKEN=$(cat "$HOME/.claude-oauth-token")
+    export CLAUDE_CODE_OAUTH_TOKEN
 fi
 
 # Usage: ./ralph-afk.sh /path/to/project <max-iterations> [prompt-file]

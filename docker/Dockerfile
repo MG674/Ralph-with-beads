@@ -33,7 +33,7 @@ RUN mkdir -p /usr/local/share/npm-global && \
 
 USER node
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
-ENV PATH=$PATH:/usr/local/share/npm-global/bin
+ENV PATH=/usr/local/share/npm-global/bin:$PATH
 
 # Install Claude Code via npm (NOT the curl installer — it fails in Docker)
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
@@ -52,10 +52,13 @@ RUN pip3 install --break-system-packages \
 # --- Security: Git wrapper (pre-tool-use hook) ---
 COPY git-wrapper.sh /usr/local/bin/git-wrapper.sh
 RUN chmod +x /usr/local/bin/git-wrapper.sh
+RUN touch /var/log/git-commands.log && \
+    chown node:node /var/log/git-commands.log
 
 # Git configuration
 RUN git config --system user.email "ralph@example.com" && \
-    git config --system user.name "Ralph Loop"
+    git config --system user.name "Ralph Loop" && \
+    git config --system alias.git '!/usr/local/bin/git-wrapper.sh'
 
 # Workspace and config directories
 RUN mkdir -p /workspace /home/node/.claude && \
