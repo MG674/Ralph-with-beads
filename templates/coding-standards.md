@@ -26,6 +26,7 @@ Follow these well-known principles. They prevent the most common AI-generated co
 - **Single Responsibility** — Each function does one thing. Each module handles one concern. If a function name needs "and" in it, split it.
 - **Open/Closed** — Extend behavior by adding new code, not by changing existing, working code. Design components to be extensible so new cases can be added without modifying the original implementation.
 - **Liskov Substitution** — Subtypes must be substitutable for their base types. If a function works with a base class, it must also work with any subclass without special checks or knowledge of the subclass.
+- **Interface Segregation** — Keep interfaces (ABCs, Protocols) small and focused. Clients should not be forced to depend on methods they don't use. Prefer several specific interfaces over one large general-purpose one.
 - **Dependency Inversion** — Depend on abstractions, not concretions. Pass dependencies in (function parameters, constructors) rather than hardcoding them inside.
 - **YAGNI (You Aren't Gonna Need It)** — Don't build for hypothetical future requirements. Write the minimum code that satisfies the current task. Unused abstractions are worse than duplication.
 - **Composition over Inheritance** — Prefer combining simple functions/objects over deep class hierarchies. Flat is better than nested.
