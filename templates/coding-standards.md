@@ -24,7 +24,7 @@ Follow these well-known principles. They prevent the most common AI-generated co
 
 - **DRY (Don't Repeat Yourself)** — If you write the same logic twice, extract a helper. Duplicated code means duplicated bugs. When fixing one copy you'll forget the other.
 - **Single Responsibility** — Each function does one thing. Each module handles one concern. If a function name needs "and" in it, split it.
-- **Open/Closed** — Prefer extending behaviour (new functions, subclasses, config) over modifying existing working code. Don't edit a function that already works just to add a new case — add a new function instead.
+- **Open/Closed** — Extend behavior by adding new code, not by changing existing, working code. Design components to be extensible so new cases can be added without modifying the original implementation.
 - **Dependency Inversion** — Depend on abstractions, not concretions. Pass dependencies in (function parameters, constructors) rather than hardcoding them inside.
 - **YAGNI (You Aren't Gonna Need It)** — Don't build for hypothetical future requirements. Write the minimum code that satisfies the current task. Unused abstractions are worse than duplication.
 - **Composition over Inheritance** — Prefer combining simple functions/objects over deep class hierarchies. Flat is better than nested.
