@@ -14,11 +14,21 @@ Accumulated wisdom from development. Consult when working on related areas.
 
 ## Architecture Decisions
 
-<!-- Record key decisions and their rationale -->
-<!-- Example:
-- Chose SQLite for local storage because: single-file, no server, good for prototyping
-- Will migrate to PostgreSQL for production (see docs/architecture.md)
--->
+### Docker Base Image: Use `node:20`, NOT `ubuntu:24.04`
+- Anthropic's official devcontainer uses `node:20` ([source](https://github.com/anthropics/claude-code/blob/main/.devcontainer/Dockerfile))
+- The `node` user is UID 1000, matching typical Linux host users — avoids permission issues
+- Ubuntu 24.04 has a `ubuntu` user at UID 1000, causing conflicts when creating a `claude` user
+- Claude Code is a Node.js app — `node:20` is the natural base
+
+### Authentication in Docker: Use `claude setup-token` + `CLAUDE_CODE_OAUTH_TOKEN`
+- `claude setup-token` generates a 1-year OAuth token for headless/Docker use
+- Pass via `-e CLAUDE_CODE_OAUTH_TOKEN="sk-ant-oat01-..."` — no file mounting needed
+- Mounting `~/.claude/.credentials.json` is fragile (UID mismatches, permission issues)
+- For API key users: use `ANTHROPIC_API_KEY` env var instead
+
+### Model Selection in Non-Interactive Mode
+- Use `claude --model sonnet` (or `opus`) flag when invoking with `-p`
+- Model aliases work: `sonnet`, `opus`, `haiku` (resolve to latest versions)
 
 ## Data Model
 
@@ -54,8 +64,42 @@ Accumulated wisdom from development. Consult when working on related areas.
 
 ## Tools & Environment
 
-<!-- Setup tips, configuration gotchas -->
-<!-- Example:
-- ruff and black can conflict — run black after ruff
-- mypy needs explicit py.typed marker for package exports
--->
+### Claude Code in Docker — Critical Requirements
+1. **Install via npm**, not the curl installer: `npm install -g @anthropic-ai/claude-code`
+   - The `curl -fsSL https://claude.ai/install | sh` installer silently fails in Docker builds ([issue #22536](https://github.com/anthropics/claude-code/issues/22536))
+2. **Do NOT use `--read-only` filesystem** — Claude Code needs to write state files to `~/.claude/`
+3. **Do NOT use `noexec` on tmpfs** — Node.js needs exec permission in `/tmp`
+4. **Do NOT run as root with `--dangerously-skip-permissions`** — blocked by security check
+   - Workaround: `IS_SANDBOX=1` env var bypasses the check ([issue #3490](https://github.com/anthropics/claude-code/issues/3490))
+   - Better: just run as non-root user (UID 1000)
+5. **Set `NODE_OPTIONS="--max-old-space-size=4096"`** — prevents OOM in large projects
+6. **Set `CLAUDE_CONFIG_DIR`** env var to control where Claude writes config
+
+### Claude Code Env Vars Reference
+| Variable | Purpose |
+|----------|---------|
+| `CLAUDE_CODE_OAUTH_TOKEN` | OAuth token auth (from `claude setup-token`) |
+| `ANTHROPIC_API_KEY` | API key auth |
+| `CLAUDE_CONFIG_DIR` | Override config directory location |
+| `IS_SANDBOX=1` | Allow `--dangerously-skip-permissions` as root |
+| `NODE_OPTIONS` | Node.js memory settings |
+
+### Beads Package Name
+- Correct: `npm install -g @beads/bd` (the `bd` CLI)
+- Wrong: `npm install -g beads` (installs unrelated package)
+
+### SSH Sessions and Environment Variables
+- `export VAR=value` is lost when SSH disconnects
+- Always persist to `~/.bashrc` AND `~/.zshrc` (check `echo $SHELL` to confirm which is active)
+- After reconnecting: `source ~/.bashrc` to reload
+
+### Pasting Commands from Claude Code (Windows) into Git Bash SSH
+- **Maximize the Claude Code window width** before copying — minimises line-wrapping issues that break commands when pasted into the SSH session
+- **Use Ctrl+C/V in Claude Code** (Windows native), but **right-click copy/paste in Git Bash** — avoids generating spurious characters
+- Long single-line commands often wrap and get split into multiple lines on paste — use shell variables or Python scripts for complex operations
+
+### Official References
+- [Anthropic devcontainer Dockerfile](https://github.com/anthropics/claude-code/blob/main/.devcontainer/Dockerfile)
+- [Anthropic devcontainer docs](https://code.claude.com/docs/en/devcontainer)
+- [Docker official Claude Code guide](https://docs.docker.com/ai/sandboxes/claude-code/)
+- [Claude Code authentication docs](https://code.claude.com/docs/en/authentication)

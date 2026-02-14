@@ -50,13 +50,14 @@ if ! [[ "$MAX_ITERATIONS" =~ ^[0-9]+$ ]] || [ "$MAX_ITERATIONS" -lt 1 ]; then
 fi
 
 # --- Credential Validation ---
-# Supports both Max subscription (OAuth via .credentials.json) and API key auth
+# Supports OAuth token (preferred), Max subscription, and API key auth
 
 CLAUDE_CREDENTIALS="$HOME/.claude/.credentials.json"
 CLAUDE_CONFIG="$HOME/.claude/config.json"
-if [ ! -f "$CLAUDE_CREDENTIALS" ] && [ ! -f "$CLAUDE_CONFIG" ] && [ -z "$CLAUDE_API_KEY" ]; then
+if [ ! -f "$CLAUDE_CREDENTIALS" ] && [ ! -f "$CLAUDE_CONFIG" ] && [ -z "$CLAUDE_API_KEY" ] && [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
     echo "ERROR: Claude credentials not found."
     echo "  Expected one of:"
+    echo "    - CLAUDE_CODE_OAUTH_TOKEN environment variable (run 'claude setup-token')"
     echo "    - $CLAUDE_CREDENTIALS (Max/Pro subscription — run 'claude login')"
     echo "    - $CLAUDE_CONFIG (API key config)"
     echo "    - CLAUDE_API_KEY environment variable"
@@ -144,26 +145,29 @@ DOCKER_ARGS=(
     --rm
     --memory=4g
     --cpus=2
-    --read-only
-    --tmpfs "/tmp:rw,nosuid,nodev,noexec,size=1g"
-    --tmpfs "/run:rw,nosuid,nodev,noexec,size=256m"
+    --tmpfs "/tmp:rw,nosuid,nodev,size=1g"
+    --tmpfs "/run:rw,nosuid,nodev,size=256m"
     -v "$(pwd)":/workspace
     -v "$PROMPT_FILE":/prompt.md:ro
     -w /workspace
 )
 
-# Mount credentials securely (read-only, specific file only)
+# Auth: OAuth token (preferred for Docker)
+if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+    DOCKER_ARGS+=(-e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN")
+fi
+# Mount credentials securely (read-only, fallback)
 # Max/Pro subscription: mount OAuth credentials
 if [ -f "$CLAUDE_CREDENTIALS" ]; then
-    DOCKER_ARGS+=(-v "$CLAUDE_CREDENTIALS:/home/claude/.claude/.credentials.json:ro")
+    DOCKER_ARGS+=(-v "$CLAUDE_CREDENTIALS:/home/node/.claude/.credentials.json:ro")
 fi
 # API key config file
 if [ -f "$CLAUDE_CONFIG" ]; then
-    DOCKER_ARGS+=(-v "$CLAUDE_CONFIG:/home/claude/.claude/config.json:ro")
+    DOCKER_ARGS+=(-v "$CLAUDE_CONFIG:/home/node/.claude/config.json:ro")
 fi
 # API key via environment variable
 if [ -n "$CLAUDE_API_KEY" ]; then
-    DOCKER_ARGS+=(-e CLAUDE_API_KEY="$CLAUDE_API_KEY")
+    DOCKER_ARGS+=(-e ANTHROPIC_API_KEY="$CLAUDE_API_KEY")
 fi
 
 # --- Main Loop ---
@@ -175,7 +179,7 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
     # Run Claude Code in Docker with timeout
     RESULT=$(timeout 600 docker run "${DOCKER_ARGS[@]}" \
         ralph-claude:latest \
-        -c "claude --dangerously-skip-permissions -p \"\$(cat /prompt.md)\"" \
+        -c "claude --dangerously-skip-permissions --model sonnet -p \"\$(cat /prompt.md)\"" \
         2>&1) || true
 
     echo "$RESULT" >> "$LOG_FILE"
