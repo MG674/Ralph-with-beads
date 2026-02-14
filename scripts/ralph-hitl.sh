@@ -3,6 +3,12 @@
 # Use this when starting a new feature, doing risky work, or learning how Ralph behaves
 set -e
 
+# --- Load OAuth token from file if not in environment ---
+# Survives SSH disconnects without needing to re-source .bashrc
+if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ] && [ -f "$HOME/.claude-oauth-token" ]; then
+    export CLAUDE_CODE_OAUTH_TOKEN=$(cat "$HOME/.claude-oauth-token")
+fi
+
 # Usage: ./ralph-hitl.sh /path/to/project [prompt-file]
 PROJECT_DIR="${1:-.}"
 PROMPT_FILE="${2:-$PROJECT_DIR/prompt.md}"
