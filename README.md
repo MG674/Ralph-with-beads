@@ -11,6 +11,16 @@ A complete workflow for autonomous AI-driven development combining:
 - **TDD** — Test-driven development with full quality checks
 - **Docker** — Isolated, reproducible execution environment
 
+## Security Notice
+
+This setup is designed for **single-user development VMs** (e.g. a personal Linux box you SSH into). It is **not suitable for shared or multi-user environments** without additional hardening:
+
+- **Tokens passed via Docker `-e` flags** are visible to any user on the host who can run `docker inspect` or `ps`. On a single-user VM this is acceptable; on a shared machine it leaks credentials.
+- **The git security wrapper** intercepts dangerous operations (force-push, push to main, branch deletion, hard reset) via PATH precedence inside the container. It is a safety net, not a sandbox — a determined actor could bypass it.
+- **`--dangerously-skip-permissions`** is required for headless Claude Code execution. The security boundary is the Docker container itself (memory/CPU limits, non-root user, git wrapper), not the flag.
+
+If you adapt this for a multi-user or production environment, consider: Docker secrets or mounted credential files, a read-only container filesystem, network isolation, and a dedicated audit logging pipeline.
+
 ## Quick Start
 
 1. **Set up a new project:**

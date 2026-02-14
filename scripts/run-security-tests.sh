@@ -79,20 +79,41 @@ echo ""
 
 echo "$(bold '2. Container Security Tests')"
 
-run_test "Non-root user" "claude" \
+run_test "Non-root user" "node" \
     docker run --rm ralph-claude-test:latest whoami
 
+run_test "Git wrapper at /usr/local/bin/git" "/usr/local/bin/git" \
+    docker run --rm ralph-claude-test:latest which git
+
 run_test "Git wrapper blocks force-push" "Force push is not allowed" \
-    docker run --rm ralph-claude-test:latest /usr/local/bin/git-wrapper.sh push -f origin HEAD
+    docker run --rm ralph-claude-test:latest /usr/local/bin/git push -f origin HEAD
 
 run_test "Git wrapper blocks main push" "Cannot push directly to main" \
-    docker run --rm ralph-claude-test:latest /usr/local/bin/git-wrapper.sh push origin main
+    docker run --rm ralph-claude-test:latest /usr/local/bin/git push origin main
 
 run_test "Git wrapper blocks branch deletion" "Branch deletion is not allowed" \
-    docker run --rm ralph-claude-test:latest /usr/local/bin/git-wrapper.sh branch -D some-branch
+    docker run --rm ralph-claude-test:latest /usr/local/bin/git branch -D some-branch
 
 run_test "Git wrapper blocks hard reset" "Hard reset is not allowed" \
-    docker run --rm ralph-claude-test:latest /usr/local/bin/git-wrapper.sh reset --hard HEAD
+    docker run --rm ralph-claude-test:latest /usr/local/bin/git reset --hard HEAD
+
+echo ""
+echo "$(bold '2b. Git Command Interception Tests (PATH-based)')"
+
+run_test "git push -f intercepted via PATH" "Force push is not allowed" \
+    docker run --rm ralph-claude-test:latest bash -c "git push -f origin HEAD"
+
+run_test "git push main intercepted via PATH" "Cannot push directly to main" \
+    docker run --rm ralph-claude-test:latest bash -c "git push origin main"
+
+run_test "git branch -D intercepted via PATH" "Branch deletion is not allowed" \
+    docker run --rm ralph-claude-test:latest bash -c "git branch -D some-branch"
+
+run_test "git reset --hard intercepted via PATH" "Hard reset is not allowed" \
+    docker run --rm ralph-claude-test:latest bash -c "git reset --hard HEAD"
+
+run_test "Safe git command passes through" "git version" \
+    docker run --rm ralph-claude-test:latest bash -c "git --version"
 
 echo ""
 

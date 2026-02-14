@@ -53,14 +53,14 @@ Rules enforced by Docker container configuration and git wrapper.
 - NEVER modify Claude Code configuration to expose tokens
 - NEVER run `rm -rf` or other destructive commands on system directories
 - NEVER spawn unlimited child processes (container has CPU/memory limits)
-- Container runs as non-root user (claude) — cannot modify system files
+- Container runs as non-root user (node, UID 1000) — cannot modify system files
 
 ### Container Constraints
 
 - Memory: Limited to 4GB (prevents DoS via memory exhaustion)
 - CPU: Limited to 2 cores (fair host sharing)
 - Timeout: Killed after 600 seconds (prevents hung processes)
-- Filesystem: Read-only except for /tmp (prevents persistence attacks)
+- Filesystem: /workspace writable (mounted project), /tmp and /run are tmpfs
 
 ### Credentials
 

@@ -1,79 +1,73 @@
-# Dockerfile for Ralph Claude Code environment
+# Ralph Claude Code environment
+# Based on Anthropic's official devcontainer pattern
+# https://github.com/anthropics/claude-code/tree/main/.devcontainer
+#
 # Build: docker build -t ralph-claude:latest .
 #
 # This image includes:
 # - Claude Code CLI
-# - Beads task management
-# - Python development tools
-# - Node.js for JavaScript projects
-# - Playwright for UI testing
+# - Beads (bd) task management
+# - Python development tools (pytest, ruff, black, mypy)
+# - Playwright + Chromium for UI testing
 #
-# Security: runs as non-root user, git wrapper blocks dangerous operations
+# Security: runs as non-root user (node, UID 1000), git wrapper blocks dangerous operations
 
-FROM ubuntu:24.04
+FROM node:20
 
-LABEL security.nonroot="true"
-LABEL security.readonlyfilesystem="false"
-LABEL security.privileged="false"
-
-# Avoid prompts during package installation
-ENV DEBIAN_FRONTEND=noninteractive
+ARG CLAUDE_CODE_VERSION=latest
 
 # Install base dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
-    nodejs \
-    npm \
+    gh \
     python3 \
     python3-pip \
     python3-venv \
-    wget \
-    unzip \
-    && rm -rf /var/lib/apt/lists/*
+    sudo \
+    jq \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Claude Code
-RUN curl -fsSL https://claude.ai/install | sh
+# Set up npm global prefix for non-root install
+RUN mkdir -p /usr/local/share/npm-global && \
+    chown -R node:node /usr/local/share/npm-global
 
-# Install Node.js tools: Beads task management + Playwright for UI testing
-RUN npm install -g beads playwright \
-    && npx playwright install --with-deps chromium
+USER node
+ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
+ENV PATH=/usr/local/share/npm-global/bin:$PATH
 
-# Install Python development tools
-RUN pip3 install --break-system-packages \
-    pytest \
-    pytest-cov \
-    ruff \
-    black \
-    mypy
+# Install Claude Code via npm (NOT the curl installer — it fails in Docker)
+RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
-# --- Security: Git wrapper (pre-tool-use hook) ---
-COPY git-wrapper.sh /usr/local/bin/git-wrapper.sh
-RUN chmod +x /usr/local/bin/git-wrapper.sh
+# Install beads and playwright
+RUN npm install -g @beads/bd playwright
 
-# --- Security: Non-root user ---
-RUN useradd -m -u 1000 claude && \
-    mkdir -p /home/claude/.claude && \
-    chown -R claude:claude /home/claude/.claude
+# System-level installs (Playwright browsers + Python dev tools)
+USER root
+RUN npx playwright install --with-deps chromium && \
+    pip3 install --no-cache-dir --break-system-packages \
+        pytest pytest-cov ruff black mypy
 
-# Ensure logs directory is writable by claude user
-RUN mkdir -p /var/log && \
-    touch /var/log/git-commands.log && \
-    chown claude:claude /var/log/git-commands.log && \
-    chmod 644 /var/log/git-commands.log
+# --- Security: Git wrapper intercepts all git commands via PATH precedence ---
+# /usr/local/bin precedes /usr/bin in PATH, so this wrapper intercepts all git calls.
+# The wrapper validates commands then delegates to /usr/bin/git.
+COPY git-wrapper.sh /usr/local/bin/git
+RUN chmod +x /usr/local/bin/git
+RUN touch /var/log/git-commands.log && \
+    chown node:node /var/log/git-commands.log
 
-# Set up working directory with secure permissions
+# Git configuration (use real binary directly — wrapper is already in PATH)
+RUN /usr/bin/git config --system user.email "ralph@example.com" && \
+    /usr/bin/git config --system user.name "Ralph Loop"
+
+# Workspace and config directories
+RUN mkdir -p /workspace /home/node/.claude && \
+    chown -R node:node /workspace /home/node/.claude
+
 WORKDIR /workspace
-RUN chown -R claude:claude /workspace && \
-    chmod 750 /workspace
+USER node
 
-# Git configuration (will be overridden by volume mount)
-RUN git config --global user.email "ralph@example.com" && \
-    git config --global user.name "Ralph Loop" && \
-    git config --global alias.git '!/usr/local/bin/git-wrapper.sh'
+# Environment for Claude Code
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV CLAUDE_CONFIG_DIR=/home/node/.claude
 
-# Switch to non-root user
-USER claude
-
-# Default entrypoint
 ENTRYPOINT ["/bin/bash"]

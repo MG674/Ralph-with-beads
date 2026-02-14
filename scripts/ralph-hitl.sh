@@ -3,6 +3,13 @@
 # Use this when starting a new feature, doing risky work, or learning how Ralph behaves
 set -e
 
+# --- Load OAuth token from file if not in environment ---
+# Survives SSH disconnects without needing to re-source .bashrc
+if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ] && [ -f "$HOME/.claude-oauth-token" ]; then
+    CLAUDE_CODE_OAUTH_TOKEN=$(cat "$HOME/.claude-oauth-token")
+    export CLAUDE_CODE_OAUTH_TOKEN
+fi
+
 # Usage: ./ralph-hitl.sh /path/to/project [prompt-file]
 PROJECT_DIR="${1:-.}"
 PROMPT_FILE="${2:-$PROJECT_DIR/prompt.md}"
@@ -37,16 +44,17 @@ if [[ ! "$PROMPT_FILE" = /* ]]; then
 fi
 
 # --- Credential Validation ---
-# Supports both Max subscription (OAuth via .credentials.json) and API key auth
+# Supports OAuth token (preferred), Max subscription, and API key auth
 
 CLAUDE_CREDENTIALS="$HOME/.claude/.credentials.json"
 CLAUDE_CONFIG="$HOME/.claude/config.json"
-if [ ! -f "$CLAUDE_CREDENTIALS" ] && [ ! -f "$CLAUDE_CONFIG" ] && [ -z "$CLAUDE_API_KEY" ]; then
+if [ ! -f "$CLAUDE_CREDENTIALS" ] && [ ! -f "$CLAUDE_CONFIG" ] && [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
     echo "ERROR: Claude credentials not found."
     echo "  Expected one of:"
+    echo "    - CLAUDE_CODE_OAUTH_TOKEN environment variable (run 'claude setup-token')"
     echo "    - $CLAUDE_CREDENTIALS (Max/Pro subscription — run 'claude login')"
     echo "    - $CLAUDE_CONFIG (API key config)"
-    echo "    - CLAUDE_API_KEY environment variable"
+    echo "    - ANTHROPIC_API_KEY environment variable"
     exit 1
 fi
 
@@ -100,35 +108,42 @@ read
 
 # --- Docker Run with Security Constraints ---
 
+# Persist git audit log on host (survives container --rm)
+mkdir -p "$PROJECT_DIR/ralph-runs"
+
 DOCKER_ARGS=(
     --rm -it
     --memory=4g
     --cpus=2
-    --read-only
-    --tmpfs "/tmp:rw,nosuid,nodev,noexec,size=1g"
-    --tmpfs "/run:rw,nosuid,nodev,noexec,size=256m"
+    --tmpfs "/tmp:rw,nosuid,nodev,size=1g"
+    --tmpfs "/run:rw,nosuid,nodev,size=256m"
     -v "$(pwd)":/workspace
     -v "$PROMPT_FILE":/prompt.md:ro
+    -v "$PROJECT_DIR/ralph-runs/git-audit.log":/var/log/git-commands.log
     -w /workspace
 )
 
-# Mount credentials securely (read-only, specific file only)
+# Auth: OAuth token (preferred for Docker)
+if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+    DOCKER_ARGS+=(-e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN")
+fi
+# Mount credentials securely (read-only, fallback)
 # Max/Pro subscription: mount OAuth credentials
 if [ -f "$CLAUDE_CREDENTIALS" ]; then
-    DOCKER_ARGS+=(-v "$CLAUDE_CREDENTIALS:/home/claude/.claude/.credentials.json:ro")
+    DOCKER_ARGS+=(-v "$CLAUDE_CREDENTIALS:/home/node/.claude/.credentials.json:ro")
 fi
 # API key config file
 if [ -f "$CLAUDE_CONFIG" ]; then
-    DOCKER_ARGS+=(-v "$CLAUDE_CONFIG:/home/claude/.claude/config.json:ro")
+    DOCKER_ARGS+=(-v "$CLAUDE_CONFIG:/home/node/.claude/config.json:ro")
 fi
 # API key via environment variable
-if [ -n "$CLAUDE_API_KEY" ]; then
-    DOCKER_ARGS+=(-e CLAUDE_API_KEY="$CLAUDE_API_KEY")
+if [ -n "$ANTHROPIC_API_KEY" ]; then
+    DOCKER_ARGS+=(-e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY")
 fi
 
 docker run "${DOCKER_ARGS[@]}" \
     ralph-claude:latest \
-    -c "claude --dangerously-skip-permissions -p \"\$(cat /prompt.md)\""
+    -c "claude --dangerously-skip-permissions --model sonnet -p \"\$(cat /prompt.md)\""
 
 echo ""
 echo "=== Iteration complete ==="
