@@ -48,13 +48,13 @@ fi
 
 CLAUDE_CREDENTIALS="$HOME/.claude/.credentials.json"
 CLAUDE_CONFIG="$HOME/.claude/config.json"
-if [ ! -f "$CLAUDE_CREDENTIALS" ] && [ ! -f "$CLAUDE_CONFIG" ] && [ -z "$CLAUDE_API_KEY" ] && [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+if [ ! -f "$CLAUDE_CREDENTIALS" ] && [ ! -f "$CLAUDE_CONFIG" ] && [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
     echo "ERROR: Claude credentials not found."
     echo "  Expected one of:"
     echo "    - CLAUDE_CODE_OAUTH_TOKEN environment variable (run 'claude setup-token')"
     echo "    - $CLAUDE_CREDENTIALS (Max/Pro subscription — run 'claude login')"
     echo "    - $CLAUDE_CONFIG (API key config)"
-    echo "    - CLAUDE_API_KEY environment variable"
+    echo "    - ANTHROPIC_API_KEY environment variable"
     exit 1
 fi
 
@@ -137,8 +137,8 @@ if [ -f "$CLAUDE_CONFIG" ]; then
     DOCKER_ARGS+=(-v "$CLAUDE_CONFIG:/home/node/.claude/config.json:ro")
 fi
 # API key via environment variable
-if [ -n "$CLAUDE_API_KEY" ]; then
-    DOCKER_ARGS+=(-e ANTHROPIC_API_KEY="$CLAUDE_API_KEY")
+if [ -n "$ANTHROPIC_API_KEY" ]; then
+    DOCKER_ARGS+=(-e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY")
 fi
 
 docker run "${DOCKER_ARGS[@]}" \
