@@ -13,10 +13,16 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 RALPH_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+DOCKER_IMAGE="ralph-claude-test:latest"
 
 bold()  { printf '\033[1m%s\033[0m' "$1"; }
 green() { printf '\033[32m%s\033[0m' "$1"; }
 red()   { printf '\033[31m%s\033[0m' "$1"; }
+
+# Run a command inside the Docker container (entrypoint is /bin/bash)
+run_in_container() {
+    docker run --rm "$DOCKER_IMAGE" -c "$1"
+}
 
 TESTS_PASSED=0
 TESTS_FAILED=0
@@ -68,7 +74,7 @@ echo ""
 # --- Build Docker Image ---
 
 echo "$(bold '1. Building Docker image...')"
-if ! docker build -t ralph-claude-test:latest "$RALPH_DIR/docker/" > /dev/null 2>&1; then
+if ! docker build -t "$DOCKER_IMAGE" "$RALPH_DIR/docker/" > /dev/null 2>&1; then
     echo "  $(red 'FAIL') Docker build failed. Fix Dockerfile first."
     exit 1
 fi
@@ -80,40 +86,40 @@ echo ""
 echo "$(bold '2. Container Security Tests')"
 
 run_test "Non-root user" "node" \
-    docker run --rm ralph-claude-test:latest whoami
+    run_in_container "whoami"
 
 run_test "Git wrapper at /usr/local/bin/git" "/usr/local/bin/git" \
-    docker run --rm ralph-claude-test:latest which git
+    run_in_container "which git"
 
 run_test "Git wrapper blocks force-push" "Force push is not allowed" \
-    docker run --rm ralph-claude-test:latest /usr/local/bin/git push -f origin HEAD
+    run_in_container "/usr/local/bin/git push -f origin HEAD"
 
 run_test "Git wrapper blocks main push" "Cannot push directly to main" \
-    docker run --rm ralph-claude-test:latest /usr/local/bin/git push origin main
+    run_in_container "/usr/local/bin/git push origin main"
 
 run_test "Git wrapper blocks branch deletion" "Branch deletion is not allowed" \
-    docker run --rm ralph-claude-test:latest /usr/local/bin/git branch -D some-branch
+    run_in_container "/usr/local/bin/git branch -D some-branch"
 
 run_test "Git wrapper blocks hard reset" "Hard reset is not allowed" \
-    docker run --rm ralph-claude-test:latest /usr/local/bin/git reset --hard HEAD
+    run_in_container "/usr/local/bin/git reset --hard HEAD"
 
 echo ""
 echo "$(bold '2b. Git Command Interception Tests (PATH-based)')"
 
 run_test "git push -f intercepted via PATH" "Force push is not allowed" \
-    docker run --rm ralph-claude-test:latest bash -c "git push -f origin HEAD"
+    run_in_container "git push -f origin HEAD"
 
 run_test "git push main intercepted via PATH" "Cannot push directly to main" \
-    docker run --rm ralph-claude-test:latest bash -c "git push origin main"
+    run_in_container "git push origin main"
 
 run_test "git branch -D intercepted via PATH" "Branch deletion is not allowed" \
-    docker run --rm ralph-claude-test:latest bash -c "git branch -D some-branch"
+    run_in_container "git branch -D some-branch"
 
 run_test "git reset --hard intercepted via PATH" "Hard reset is not allowed" \
-    docker run --rm ralph-claude-test:latest bash -c "git reset --hard HEAD"
+    run_in_container "git reset --hard HEAD"
 
 run_test "Safe git command passes through" "git version" \
-    docker run --rm ralph-claude-test:latest bash -c "git --version"
+    run_in_container "git --version"
 
 echo ""
 
@@ -122,7 +128,7 @@ echo ""
 echo "$(bold '3. Timeout Test')"
 
 run_test_exit_code "Timeout kills hung process (5s)" 124 \
-    timeout 5 docker run --rm ralph-claude-test:latest sleep 60
+    timeout 5 run_in_container "sleep 60"
 
 echo ""
 
