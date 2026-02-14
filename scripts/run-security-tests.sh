@@ -62,8 +62,8 @@ run_test_exit_code() {
 
     echo -n "  Testing: $name ... "
 
-    "$@" > /dev/null 2>&1
-    actual_code=$?
+    actual_code=0
+    "$@" > /dev/null 2>&1 || actual_code=$?
 
     if [ "$actual_code" -eq "$expected_code" ]; then
         record_pass
@@ -132,6 +132,7 @@ echo ""
 
 echo "$(bold '3. Timeout Test')"
 
+# Inline docker command here: timeout needs an external command, not a bash function
 run_test_exit_code "Timeout kills hung process (5s)" 124 \
     timeout 5 docker run --rm "$DOCKER_IMAGE" -c "sleep 60"
 
