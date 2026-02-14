@@ -38,12 +38,12 @@ run_test() {
 
     if [[ "$output" == *"$expected"* ]]; then
         echo "$(green 'PASS')"
-        ((TESTS_PASSED++))
+        ((++TESTS_PASSED))
     else
         echo "$(red 'FAIL')"
         echo "    Expected to contain: $expected"
         echo "    Got: $(echo "$output" | head -3)"
-        ((TESTS_FAILED++))
+        ((++TESTS_FAILED))
     fi
 }
 
@@ -59,11 +59,11 @@ run_test_exit_code() {
 
     if [ "$actual_code" -eq "$expected_code" ]; then
         echo "$(green 'PASS')"
-        ((TESTS_PASSED++))
+        ((++TESTS_PASSED))
     else
         echo "$(red 'FAIL')"
         echo "    Expected exit code: $expected_code, got: $actual_code"
-        ((TESTS_FAILED++))
+        ((++TESTS_FAILED))
     fi
 }
 
