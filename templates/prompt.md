@@ -91,3 +91,6 @@ f. If you hit a problem that wasted time, add a guardrail to docs/guardrails.md
 - Never skip failing tests
 - Commit after each completed task
 - If stuck after genuine effort, document what you tried and move on
+- Do NOT modify verify.sh unless the task explicitly requires it
+- Do NOT use hardcoded container paths (e.g. `/workspace`) — code must work both inside Docker and on the host machine
+- Do NOT set PYTHONPATH to fix import issues — use `pip install -e .` instead

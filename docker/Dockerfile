@@ -56,7 +56,7 @@ RUN touch /var/log/git-commands.log && \
     chown node:node /var/log/git-commands.log
 
 # Git configuration (use real binary directly — wrapper is already in PATH)
-RUN /usr/bin/git config --system user.email "ralph@example.com" && \
+RUN /usr/bin/git config --system user.email "ralph-loop[bot]@users.noreply.github.com" && \
     /usr/bin/git config --system user.name "Ralph Loop"
 
 # Workspace and config directories
