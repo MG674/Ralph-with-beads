@@ -1,4 +1,4 @@
-# Custom Task Prompt
+# [Title -- e.g., Fix PR #25 Review Comments]
 
 You are working on [PROJECT_NAME].
 
@@ -17,10 +17,15 @@ Do NOT skip this step. Guardrails override all other instructions.
 
 ## STEP 2: TASK
 
-<!-- Replace this section with your specific task description -->
-<!-- Be specific: what files to change, what the fix is, what NOT to do -->
+Do NOT pick a new bead. Do NOT run `bd ready`. Instead, complete the following:
 
-[DESCRIBE YOUR TASK HERE]
+### 1. [Change title]
+
+[Describe what to change, where, and why. Be specific — reference file paths and line numbers.]
+
+### 2. [Change title]
+
+[Details]
 
 ## STEP 3: VERIFY
 
@@ -39,9 +44,10 @@ If verify.sh fails:
 - ONLY do what is described in Step 2 — nothing else
 - Do NOT pick up new beads or run `bd ready`
 - Do NOT refactor unrelated code
-- Do NOT modify verify.sh
-- Do NOT modify build/tool config in pyproject.toml (e.g. pythonpath, requires-python, tool settings)
-- Do NOT work around Docker/container environment differences by changing project files
+- Do NOT modify `verify.sh`
+- Do NOT modify build/tool config in `pyproject.toml` (e.g. pythonpath, requires-python, tool settings)
+- Do NOT work around Docker/container environment differences by changing project files — project files must work on the host machine
 - Do NOT use hardcoded container paths (e.g. `/workspace`)
 - Do NOT set PYTHONPATH — use `pip install -e .` instead
 - Guardrails ALWAYS take precedence over lessons-learned.md
+- If a fix seems to require violating a guardrail, STOP and document the conflict rather than proceeding

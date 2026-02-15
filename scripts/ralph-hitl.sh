@@ -145,7 +145,7 @@ fi
 
 docker run "${DOCKER_ARGS[@]}" \
     ralph-claude:latest \
-    -c "claude --dangerously-skip-permissions --model sonnet -p \"\$(cat /prompt.md)\""
+    -c "claude --dangerously-skip-permissions --model sonnet -p \"\$(echo 'IMPORTANT: Read docs/guardrails.md FIRST. Guardrails ALWAYS take precedence over docs/lessons-learned.md. If a fix requires violating a guardrail, STOP and document the conflict.' && echo && cat /prompt.md)\""
 
 echo ""
 echo "=== Iteration complete ==="

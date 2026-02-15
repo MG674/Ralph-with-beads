@@ -92,7 +92,8 @@ f. If you hit a problem that wasted time, add a guardrail to docs/guardrails.md
 - Commit after each completed task
 - If stuck after genuine effort, document what you tried and move on
 - Do NOT modify verify.sh unless the task explicitly requires it
-- Do NOT modify build/tool config in pyproject.toml (e.g. pythonpath, requires-python, tool settings) unless the task explicitly requires it
+- Do NOT modify build/tool config in `pyproject.toml` (e.g. pythonpath, requires-python, tool settings) unless the task explicitly requires it
 - Do NOT work around Docker/container environment differences by changing project files — project files must work on the host machine
 - Do NOT use hardcoded container paths (e.g. `/workspace`) — code must work both inside Docker and on the host machine
 - Do NOT set PYTHONPATH to fix import issues — use `pip install -e .` instead
+- Custom prompts (fix prompts, one-off tasks) MUST include a pre-flight step to read docs/guardrails.md. Use templates/custom-prompt.md as the base
