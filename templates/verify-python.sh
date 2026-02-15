@@ -3,15 +3,11 @@
 # All checks must pass before closing a task or committing
 set -e
 
-# Activate venv if present
+# Use venv tools directly if present (avoids sourcing activate script)
 if [ -d ".venv" ]; then
-    set +e; source .venv/bin/activate
-    rc=$?
-    set -e
-    if [ $rc -ne 0 ] && [ $rc -ne 1 ]; then
-        echo "ERROR: venv activation failed with exit code $rc"
-        exit 1
-    fi
+    PYTHON_PREFIX=".venv/bin/"
+else
+    PYTHON_PREFIX=""
 fi
 
 echo "=========================================="
@@ -20,22 +16,22 @@ echo "=========================================="
 echo ""
 
 echo "=== LINT (ruff) ==="
-ruff check .
+${PYTHON_PREFIX}ruff check .
 echo "✓ Lint passed"
 echo ""
 
 echo "=== FORMAT (black) ==="
-black --check .
+${PYTHON_PREFIX}black --check .
 echo "✓ Format passed"
 echo ""
 
 echo "=== TYPE CHECK (mypy) ==="
-mypy . --ignore-missing-imports
+${PYTHON_PREFIX}mypy . --ignore-missing-imports
 echo "✓ Type check passed"
 echo ""
 
 echo "=== TESTS + COVERAGE (pytest) ==="
-pytest --tb=short -q --cov=src --cov-fail-under=80 --cov-report=term-missing
+${PYTHON_PREFIX}pytest --tb=short -q --cov=src --cov-fail-under=80 --cov-report=term-missing
 echo "✓ Tests passed, coverage >= 80%"
 echo ""
 
