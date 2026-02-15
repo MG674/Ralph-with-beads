@@ -5,7 +5,12 @@ set -e
 
 # Activate venv if present
 if [ -d ".venv" ]; then
-    source .venv/bin/activate || true
+    source .venv/bin/activate
+    rc=$?
+    if [ $rc -ne 0 ] && [ $rc -ne 1 ]; then
+        echo "ERROR: venv activation failed with exit code $rc"
+        exit 1
+    fi
 fi
 
 echo "=========================================="
