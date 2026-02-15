@@ -3,6 +3,11 @@
 # All checks must pass before closing a task or committing
 set -e
 
+# Activate venv if present
+if [ -d ".venv" ]; then
+    source .venv/bin/activate || true
+fi
+
 echo "=========================================="
 echo "  QUALITY VERIFICATION"
 echo "=========================================="
@@ -23,14 +28,9 @@ mypy . --ignore-missing-imports
 echo "✓ Type check passed"
 echo ""
 
-echo "=== TESTS (pytest) ==="
-pytest --tb=short -q
-echo "✓ Tests passed"
-echo ""
-
-echo "=== COVERAGE ==="
-pytest --cov=src --cov-fail-under=80 --cov-report=term-missing -q
-echo "✓ Coverage >= 80%"
+echo "=== TESTS + COVERAGE (pytest) ==="
+pytest --tb=short -q --cov=src --cov-fail-under=80 --cov-report=term-missing
+echo "✓ Tests passed, coverage >= 80%"
 echo ""
 
 echo "=========================================="
