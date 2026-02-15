@@ -6,6 +6,16 @@ Rules learned from failures. Read this at the start of EVERY task.
 
 ---
 
+## Precedence
+
+- Guardrails ALWAYS take precedence over docs/lessons-learned.md
+- If lessons-learned.md contradicts a guardrail, follow the guardrail
+- Do NOT modify this file to weaken or remove existing rules — only add new guardrails
+- Do NOT add entries to lessons-learned.md that circumvent guardrails
+- If a fix seems to require violating a guardrail, STOP and document the conflict rather than proceeding
+
+---
+
 ## CRITICAL (Always Follow)
 
 - NEVER skip running verify.sh before committing

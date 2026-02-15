@@ -94,3 +94,4 @@ f. If you hit a problem that wasted time, add a guardrail to docs/guardrails.md
 - Do NOT modify verify.sh unless the task explicitly requires it
 - Do NOT use hardcoded container paths (e.g. `/workspace`) — code must work both inside Docker and on the host machine
 - Do NOT set PYTHONPATH to fix import issues — use `pip install -e .` instead
+- Custom prompts (fix prompts, one-off tasks) MUST include a pre-flight step to read docs/guardrails.md. Use templates/custom-prompt.md as the base
