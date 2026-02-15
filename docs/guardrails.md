@@ -13,6 +13,9 @@ Rules learned from failures. Read this at the start of EVERY task.
 - NEVER skip type checking even if tests pass
 - ALWAYS validate input data before processing
 - ALWAYS handle errors explicitly (no silent failures)
+- NEVER modify `verify.sh` unless the task explicitly requires it
+- NEVER modify build/tool config in `pyproject.toml` (e.g. pythonpath, requires-python, tool settings) unless the task explicitly requires it
+- NEVER work around Docker/container environment differences by changing project files — project files must work on the host machine
 
 ## Git
 
