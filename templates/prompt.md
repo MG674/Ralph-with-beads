@@ -20,9 +20,9 @@ Do NOT skip this step. Guardrails override all other instructions.
 
 Priority order:
 
-1. Run `bd list --json` — check for any beads with status `in_progress`. If found, that is your task — skip to Step 2.
-2. Run `bd ready --json` — check for unblocked open tasks. If found, pick highest priority — go to Step 2.
-3. If no `in_progress` AND no ready tasks:
+1. Run `bd list --status in_progress --json` — if any results, that is your task — skip to Step 2.
+2. Run `bd list --ready --json` — pick highest priority — go to Step 2.
+3. If both return empty:
    - Run `bd list` to check overall status
    - If ALL beads are closed → output `<promise>COMPLETE</promise>` and STOP
    - If some beads are open but ALL are blocked → output `<promise>BLOCKED</promise>` with explanation of what's blocking, and STOP
