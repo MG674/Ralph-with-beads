@@ -64,6 +64,12 @@ Accumulated wisdom from development. Consult when working on related areas.
 
 ## Tools & Environment
 
+### Docker Build Command
+- Always run from **repo root**: `docker build -t ralph-claude:latest docker/`
+- Do NOT `cd docker && docker build .` — fragile and easy to forget the `cd`
+- Do NOT use `-f docker/Dockerfile .` — COPY context will be wrong (git-wrapper.sh is in `docker/`)
+- Only `git-wrapper.sh` is baked into the image. Prompt files, guardrails, and lessons-learned are bind-mounted at runtime via the project's `/workspace` volume — so rebuilding the image is only needed when `docker/Dockerfile` or `docker/git-wrapper.sh` change
+
 ### Claude Code in Docker — Critical Requirements
 1. **Install via npm**, not the curl installer: `npm install -g @anthropic-ai/claude-code`
    - The `curl -fsSL https://claude.ai/install | sh` installer silently fails in Docker builds ([issue #22536](https://github.com/anthropics/claude-code/issues/22536))

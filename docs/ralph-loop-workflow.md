@@ -160,8 +160,8 @@ ENTRYPOINT ["/bin/bash"]
 ```
 
 ```bash
-cd ralph-with-beads/docker
-docker build -t ralph-claude:latest .
+cd ralph-with-beads
+docker build -t ralph-claude:latest docker/
 ```
 
 ### 3.6 Git Setup
