@@ -31,10 +31,9 @@ If you adapt this for a multi-user or production environment, consider: Docker s
    # Or manual setup — see ralph-loop-workflow.md Phase 0
    ```
 
-2. **Build the Docker image:**
+2. **Build the Docker image (from repo root):**
    ```bash
-   cd docker
-   docker build -t ralph-claude:latest .
+   docker build -t ralph-claude:latest docker/
    ```
 
 3. **Create your PRD and tasks:**

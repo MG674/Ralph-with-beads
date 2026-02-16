@@ -2,7 +2,7 @@
 # Based on Anthropic's official devcontainer pattern
 # https://github.com/anthropics/claude-code/tree/main/.devcontainer
 #
-# Build: docker build -t ralph-claude:latest .
+# Build (from repo root): docker build -t ralph-claude:latest docker/
 #
 # This image includes:
 # - Claude Code CLI

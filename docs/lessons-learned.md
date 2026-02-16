@@ -64,6 +64,12 @@ Accumulated wisdom from development. Consult when working on related areas.
 
 ## Tools & Environment
 
+### Docker Build Command
+- Always run from **repo root**: `docker build -t ralph-claude:latest docker/`
+- Do NOT `cd docker && docker build .` — fragile and easy to forget the `cd`
+- Do NOT use `-f docker/Dockerfile .` — COPY context will be wrong (git-wrapper.sh is in `docker/`)
+- Only `git-wrapper.sh` is baked into the image. Prompt files, guardrails, and lessons-learned are bind-mounted at runtime via the project's `/workspace` volume — so rebuilding the image is only needed when `docker/Dockerfile` or `docker/git-wrapper.sh` change
+
 ### Claude Code in Docker — Critical Requirements
 1. **Install via npm**, not the curl installer: `npm install -g @anthropic-ai/claude-code`
    - The `curl -fsSL https://claude.ai/install | sh` installer silently fails in Docker builds ([issue #22536](https://github.com/anthropics/claude-code/issues/22536))
@@ -84,6 +90,11 @@ Accumulated wisdom from development. Consult when working on related areas.
 | `CLAUDE_CONFIG_DIR` | Override config directory location |
 | `IS_SANDBOX=1` | Allow `--dangerously-skip-permissions` as root |
 | `NODE_OPTIONS` | Node.js memory settings |
+
+### Beads Git Config: Set `beads.role`
+- Run `git config beads.role developer` in each project repo after init
+- Without this, every `bd` command prints `warning: beads.role not configured`
+- Harmless but noisy — set it early to keep output clean
 
 ### Beads Package Name
 - Correct: `npm install -g @beads/bd` (the `bd` CLI)
@@ -112,6 +123,17 @@ Accumulated wisdom from development. Consult when working on related areas.
 - **Maximize the Claude Code window width** before copying — minimises line-wrapping issues that break commands when pasted into the SSH session
 - **Use Ctrl+C/V in Claude Code** (Windows native), but **right-click copy/paste in Git Bash** — avoids generating spurious characters
 - Long single-line commands often wrap and get split into multiple lines on paste — use shell variables or Python scripts for complex operations
+
+### Before Launching AFK Runs
+- **Commit beads changes first**: `git add .beads/issues.jsonl && git commit -m "chore: update beads database"` — if you've run `bd create` or `bd update` manually, the JSONL is unstaged. The AFK script does `git pull --rebase` at start, which fails with unstaged changes. The script logs a warning but continues on a stale base.
+- **Check working tree is clean**: `git status` should show nothing unstaged before running `ralph-afk.sh`
+
+### Monitoring AFK Progress
+- Log location: `<project>/ralph-runs/ralph-<timestamp>.log`
+- List logs (newest first): `ls --sort=newest <project>/ralph-runs/ | head -3` (Omarchy uses `eza` aliased to `ls` — standard `ls -lt` won't work)
+- Watch live: `tail -f <project>/ralph-runs/ralph-<timestamp>.log`
+- Check process still running: `ps aux | grep ralph`
+- The AFK script creates a branch named `ralph/afk-<timestamp>` — your shell prompt will show it
 
 ### Official References
 - [Anthropic devcontainer Dockerfile](https://github.com/anthropics/claude-code/blob/main/.devcontainer/Dockerfile)
