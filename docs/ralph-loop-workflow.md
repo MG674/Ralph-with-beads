@@ -93,7 +93,7 @@ claude  # Authenticate with Anthropic account
 
 ```bash
 # Via npm (or bun)
-npm install -g beads
+npm install -g @beads/bd
 
 # Initialise in your project repo
 cd your-project
@@ -139,23 +139,40 @@ Build the Claude Code Docker image:
 
 ```dockerfile
 # docker/Dockerfile
-FROM ubuntu:24.04
+FROM node:20
 
-RUN apt-get update && apt-get install -y \
-    curl git nodejs npm python3 python3-pip \
-    && rm -rf /var/lib/apt/lists/*
+ARG CLAUDE_CODE_VERSION=latest
 
-# Install Claude Code
-RUN curl -fsSL https://claude.ai/install | sh
+# Install base dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git gh python3 python3-pip python3-venv sudo jq \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Beads
-RUN npm install -g beads
+# Non-root user setup (node user from base image, UID 1000)
+RUN mkdir -p /usr/local/share/npm-global && \
+    chown -R node:node /usr/local/share/npm-global
+USER node
+ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
+ENV PATH=/usr/local/share/npm-global/bin:$PATH
 
-# Install Playwright for UI testing
-RUN npx playwright install --with-deps chromium
+# Install Claude Code via npm (NOT the curl installer — it fails in Docker)
+RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
+
+# Install beads and playwright
+RUN npm install -g @beads/bd playwright
+
+# System-level installs (Playwright browsers + Python dev tools)
+USER root
+RUN npx playwright install --with-deps chromium && \
+    pip3 install --no-cache-dir --break-system-packages \
+        pytest pytest-cov ruff black mypy
+
+# Git wrapper for security (blocks dangerous operations)
+COPY git-wrapper.sh /usr/local/bin/git
+RUN chmod +x /usr/local/bin/git
 
 WORKDIR /workspace
-
+USER node
 ENTRYPOINT ["/bin/bash"]
 ```
 
