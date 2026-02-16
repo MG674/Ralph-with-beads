@@ -91,6 +91,11 @@ Accumulated wisdom from development. Consult when working on related areas.
 | `IS_SANDBOX=1` | Allow `--dangerously-skip-permissions` as root |
 | `NODE_OPTIONS` | Node.js memory settings |
 
+### Beads Git Config: Set `beads.role`
+- Run `git config beads.role developer` in each project repo after init
+- Without this, every `bd` command prints `warning: beads.role not configured`
+- Harmless but noisy — set it early to keep output clean
+
 ### Beads Package Name
 - Correct: `npm install -g @beads/bd` (the `bd` CLI)
 - Wrong: `npm install -g beads` (installs unrelated package)
