@@ -26,7 +26,7 @@ If you adapt this for a multi-user or production environment, consider: Docker s
 - **Docker Desktop 4.50+** — container isolation for AFK runs
 - **tmux** — session persistence for SSH-based workflows (survives disconnects)
 - **GitHub CLI (`gh`)** — PR creation, issue management
-- **Claude Code** — `curl -fsSL https://claude.ai/install.sh | bash` or npm
+- **Claude Code** — `npm install -g @anthropic-ai/claude-code` (recommended for Docker compatibility)
 - **Beads CLI** — `npm install -g @beads/bd` (NOT `npm install -g beads`)
 - **Python 3.11+** with venv — for project development
 - **Git** with SSH keys configured for your repo
