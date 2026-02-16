@@ -82,10 +82,10 @@ If you are running low on context:
 ## STEP 6: COMPLETE THE TASK
 
 1. Close the bead: `bd close <id> --reason "what was done"`
-2. Commit with message: `[BD-XXX] Brief description`
-3. If you learned something useful → append to `docs/lessons-learned.md`
-4. If you hit a time-wasting problem → add guardrail to `docs/guardrails.md`
-5. If you discovered new work → `bd create "..." task|bug|feature <priority>`
+2. If you learned something useful → append to `docs/lessons-learned.md`
+3. If you hit a time-wasting problem → add guardrail to `docs/guardrails.md`
+4. If you discovered new work → `bd create "..." task|bug|feature <priority>`, and link it if related: `bd dep relate <new-id> <original-id>`
+5. Commit all changes: `git add -A && git commit -m "[BD-XXX] Brief description"`
 
 ## STEP 7: STOP
 
