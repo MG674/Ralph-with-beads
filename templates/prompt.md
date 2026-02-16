@@ -7,25 +7,32 @@ You are working on [PROJECT_NAME].
 @CLAUDE.md
 @prd.md
 
-## STEP 1: CHECK FOR COMPLETION (DO THIS FIRST)
+## STEP 0: GUARDRAILS PRE-FLIGHT (MANDATORY)
 
-Run `bd ready --json` to check for unblocked tasks.
+Before doing ANYTHING else:
+1. Read `docs/guardrails.md` — these rules ALWAYS take precedence
+2. Read `docs/lessons-learned.md` — check for relevant patterns
+3. Read `coding-standards.md` if making code changes
 
-If NO ready tasks exist:
+Do NOT skip this step. Guardrails override all other instructions.
 
-- Run `bd list` to check overall status
-- If ALL tasks are closed, output <promise>COMPLETE</promise>
-- If tasks exist but are blocked, output <promise>BLOCKED</promise> with explanation
-- STOP HERE - do not proceed to Step 2
+## STEP 1: CHECK FOR WORK (DO THIS BEFORE ANYTHING ELSE)
 
-## STEP 2: SELECT AND EXECUTE ONE TASK
+Priority order:
 
-If ready tasks exist:
+1. Run `bd list --json` — check for any beads with status `in_progress`. If found, that is your task — skip to Step 2.
+2. Run `bd ready --json` — check for unblocked open tasks. If found, pick highest priority — go to Step 2.
+3. If no `in_progress` AND no ready tasks:
+   - Run `bd list` to check overall status
+   - If ALL beads are closed → output `<promise>COMPLETE</promise>` and STOP
+   - If some beads are open but ALL are blocked → output `<promise>BLOCKED</promise>` with explanation of what's blocking, and STOP
 
-1. Select the highest-priority ready task
-2. Read the task description and any parent epic context
-3. Read docs/guardrails.md for rules to follow
-4. Check docs/lessons-learned.md for relevant patterns
+## STEP 2: UNDERSTAND THE TASK
+
+1. Read the bead description carefully
+2. Identify acceptance criteria
+3. Check dependencies and related beads
+4. If the bead is `in_progress` (resumed from previous iteration), check git log and existing code to understand what was already done
 
 ## STEP 3: IMPLEMENT WITH TDD
 
@@ -47,53 +54,59 @@ c. **REFACTOR**: Clean up while tests stay green
 
 ## STEP 4: VERIFY QUALITY
 
-Run `./verify.sh` which executes:
+Run `bash verify.sh` (lint, format, type check, tests).
 
-- Lint check
-- Format check  
-- Type check (if applicable)
-- Full test suite
+If ALL checks pass → proceed to Step 5.
 
-If ANY check fails:
-
-- Fix the issues
-- Run verify.sh again
-- Do NOT proceed until all checks pass
-
-If you cannot fix the failures after genuine effort:
-
-- Output `<verify-fail>one-line summary of the failure</verify-fail>`
-- Document what you tried in docs/lessons-learned.md
-- Do NOT close the task — leave it in_progress for the next iteration
+If checks fail:
+- Fix the issues and run `bash verify.sh` again
+- You get **3 attempts**. If still failing after 3 genuine fix attempts:
+  1. Record what you tried and what failed → append to `docs/lessons-learned.md`
+  2. If you identified a recurring trap → add guardrail to `docs/guardrails.md`
+  3. Commit your progress (even if incomplete): `git add -A && git commit -m "[BD-XXX] WIP: partial progress, verify failing"`
+  4. Output `<verify-fail>one-line summary of the failure</verify-fail>`
+  5. STOP — do NOT close the bead, leave it `in_progress` for the next iteration
 
 ## STEP 5: SELF-AUDIT
 
-Before closing the task, re-read the bead description and confirm every requirement in it is met:
-
-- Compare your implementation against each element of the task description
+Re-read the bead description and confirm EVERY acceptance criterion is met:
+- Compare your implementation against each requirement
 - If any requirement is not addressed, fix it now (return to Step 3)
-- Only proceed to Step 6 when all requirements are satisfied
+- Only proceed when ALL requirements are satisfied
+
+If you are running low on context:
+1. Commit your progress: `git add -A && git commit -m "[BD-XXX] WIP: partial progress, context limit"`
+2. Output `<verify-fail>context window limit approaching — progress committed</verify-fail>`
+3. STOP — leave bead `in_progress` for the next iteration
 
 ## STEP 6: COMPLETE THE TASK
 
-a. Update task status: `bd update <id> in_progress` → work → `bd close <id> "what was done"`
-b. Record discovered work: `bd create "..." bug|feature <priority>`
-c. Link discoveries: `bd dep relate <new-id> <original-id>`
-d. Commit with message: `[BD-XXX] Brief description`
-e. If you learned something useful, append to docs/lessons-learned.md
-f. If you hit a problem that wasted time, add a guardrail to docs/guardrails.md
+1. Close the bead: `bd close <id> --reason "what was done"`
+2. Commit with message: `[BD-XXX] Brief description`
+3. If you learned something useful → append to `docs/lessons-learned.md`
+4. If you hit a time-wasting problem → add guardrail to `docs/guardrails.md`
+5. If you discovered new work → `bd create "..." task|bug|feature <priority>`
+
+## STEP 7: STOP
+
+Do NOT start another task. One task per iteration.
+
+Output nothing further. The loop script will invoke you again.
 
 ## Rules
 
-- ONLY work on ONE task per iteration
-- Quality over speed - small steps compound into big progress
-- Always run verify.sh before closing a task
-- Never skip failing tests
-- Commit after each completed task
-- If stuck after genuine effort, document what you tried and move on
-- Do NOT modify verify.sh unless the task explicitly requires it
-- Do NOT modify build/tool config in `pyproject.toml` (e.g. pythonpath, requires-python, tool settings) unless the task explicitly requires it
-- Do NOT work around Docker/container environment differences by changing project files — project files must work on the host machine
-- Do NOT use hardcoded container paths (e.g. `/workspace`) — code must work both inside Docker and on the host machine
-- Do NOT set PYTHONPATH to fix import issues — use `pip install -e .` instead
-- Custom prompts (fix prompts, one-off tasks) MUST include a pre-flight step to read docs/guardrails.md. Use templates/custom-prompt.md as the base
+- ONE task per iteration — do not start a second task
+- Quality over speed — small steps compound
+- `bash verify.sh` before closing — no exceptions
+- Never skip failing tests — fix them or `<verify-fail>`
+- Commit after each completed task, before stopping
+- **3-strike rule**: if verify.sh fails 3 times on the same issue, commit WIP, record what you tried, and bail with `<verify-fail>` — the next iteration gets a fresh context window
+- NEVER modify `verify.sh` unless the task explicitly requires it
+- NEVER modify build/tool config in `pyproject.toml` (pythonpath, requires-python, tool settings) unless the task explicitly requires it
+- NEVER work around Docker/container environment — verify.sh and project files must work both inside Docker and on the host machine
+- NEVER use hardcoded container paths (e.g. `/workspace`)
+- NEVER set PYTHONPATH — use `pip install -e .` instead
+- NEVER commit directly to main/master
+- Guardrails ALWAYS take precedence over lessons-learned.md
+- If a fix seems to require violating a guardrail, STOP and document the conflict
+- Record lessons and guardrails AS SOON AS you hit a problem — do not wait until task completion
