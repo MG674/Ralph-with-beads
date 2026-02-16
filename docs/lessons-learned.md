@@ -124,6 +124,17 @@ Accumulated wisdom from development. Consult when working on related areas.
 - **Use Ctrl+C/V in Claude Code** (Windows native), but **right-click copy/paste in Git Bash** — avoids generating spurious characters
 - Long single-line commands often wrap and get split into multiple lines on paste — use shell variables or Python scripts for complex operations
 
+### Before Launching AFK Runs
+- **Commit beads changes first**: `git add .beads/issues.jsonl && git commit -m "chore: update beads database"` — if you've run `bd create` or `bd update` manually, the JSONL is unstaged. The AFK script does `git pull --rebase` at start, which fails with unstaged changes. The script logs a warning but continues on a stale base.
+- **Check working tree is clean**: `git status` should show nothing unstaged before running `ralph-afk.sh`
+
+### Monitoring AFK Progress
+- Log location: `<project>/ralph-runs/ralph-<timestamp>.log`
+- List logs (newest first): `ls --sort=newest <project>/ralph-runs/ | head -3` (Omarchy uses `eza` aliased to `ls` — standard `ls -lt` won't work)
+- Watch live: `tail -f <project>/ralph-runs/ralph-<timestamp>.log`
+- Check process still running: `ps aux | grep ralph`
+- The AFK script creates a branch named `ralph/afk-<timestamp>` — your shell prompt will show it
+
 ### Official References
 - [Anthropic devcontainer Dockerfile](https://github.com/anthropics/claude-code/blob/main/.devcontainer/Dockerfile)
 - [Anthropic devcontainer docs](https://code.claude.com/docs/en/devcontainer)
