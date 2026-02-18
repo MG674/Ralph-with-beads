@@ -21,7 +21,7 @@ Do NOT skip this step. Guardrails override all other instructions.
 Priority order:
 
 1. Run `bd list --status in_progress --json` — if any results, that is your task — skip to Step 2.
-2. Run `bd list --ready --json` — pick highest priority — go to Step 2.
+2. Run `bd list --ready --json` — if any results, pick highest priority — go to Step 2.
 3. If both return empty:
    - Run `bd list` to check overall status
    - If ALL beads are closed → output `<promise>COMPLETE</promise>` and STOP
