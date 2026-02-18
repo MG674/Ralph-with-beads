@@ -179,5 +179,4 @@ For highest quality, paste the plan into a separate LLM conversation (different 
 
 Prompt for the reviewing LLM:
 > "Review this plan/specification for an autonomous AI coding agent. Focus on: completeness, architectural clarity, acceptance criteria quality (must be machine-testable), decomposability into small single-layer tasks, dependency ordering, and risk coverage. Be specific — suggest exact changes, not general advice."
-
 > **Source**: Jeffrey Emanuel's iterative review process — 4-5 rounds until suggestions become incremental is the empirical sweet spot.

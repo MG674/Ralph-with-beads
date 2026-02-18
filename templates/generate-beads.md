@@ -38,7 +38,7 @@ If you need "and", split into two beads.
 
 ### 2. Single Architectural Layer
 
-Each bead touches ONE layer: backend OR frontend OR infrastructure. Never both.
+Each bead touches ONE layer: backend OR frontend OR infrastructure OR integration. Never both.
 
 - GOOD: "Add distance calculation endpoint (backend)"
 - BAD: "Add distance calculation and display results in GUI"
