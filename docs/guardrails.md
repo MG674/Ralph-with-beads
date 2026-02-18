@@ -102,3 +102,28 @@ Rules enforced by Docker container configuration and git wrapper.
 - CSV parser silently drops rows with missing timestamps — always validate row count after parsing
 - Column headers may have trailing spaces — always strip() before matching
 -->
+
+## Bead Quality (Critical)
+
+### Bead completion: line-by-line acceptance criterion audit
+
+- Before closing a bead, list EVERY acceptance criterion from the bead description
+- For EACH criterion, state what code/test satisfies it — or acknowledge it is NOT met
+- If ANY criterion is unmet, do NOT close the bead — either implement it, or commit WIP, leave `in_progress`, and document what remains
+- Adding a `--no-gui` / `--headless` / `--dry-run` flag does NOT satisfy criteria that mention visual output, GUI, window, or user-facing behaviour
+- The close reason must reference every acceptance criterion, not just summarise what was built
+- Source: c00 incident — Ralph closed bead claiming pipeline complete while skipping all GUI acceptance criteria
+
+### Beads must not cross architectural boundaries
+
+- A single bead should not span both backend (pipeline, processing) and frontend (GUI, rendering)
+- If a bead requires work in more than one architectural layer, split it before starting
+- If you discover mid-implementation that a bead is too large, commit WIP, leave `in_progress`, and document what remains
+- NEVER close a large bead by delivering only one layer and skipping the other
+
+### Bead sizing at creation time
+
+- When creating beads from a PRD or architecture doc, review each bead for single-responsibility
+- A bead that mentions BOTH data processing AND visual rendering is too broad — split it
+- A bead with more than 5 acceptance criteria is a warning sign — consider splitting
+- Tracer bullets are especially prone to being too large because they cross all layers by definition — split into per-layer beads with dependencies

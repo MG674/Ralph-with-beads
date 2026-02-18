@@ -67,12 +67,19 @@ If checks fail:
   4. Output `<verify-fail>one-line summary of the failure</verify-fail>`
   5. STOP — do NOT close the bead, leave it `in_progress` for the next iteration
 
-## STEP 5: SELF-AUDIT
+## STEP 5: SELF-AUDIT (MANDATORY — DO NOT SKIP)
 
-Re-read the bead description and confirm EVERY acceptance criterion is met:
-- Compare your implementation against each requirement
-- If any requirement is not addressed, fix it now (return to Step 3)
-- Only proceed when ALL requirements are satisfied
+Re-read the bead description and audit EVERY acceptance criterion individually:
+
+1. List each acceptance criterion verbatim from the bead description
+2. For EACH criterion, write: "MET — [what satisfies it]" or "NOT MET — [what's missing]"
+3. If ANY criterion is NOT MET:
+   - If you can implement it now, return to Step 3
+   - If the bead is too large to finish, commit WIP with `in_progress` and `<verify-fail>bead too large — [what remains]</verify-fail>`
+4. Only proceed to Step 6 when ALL criteria show MET
+5. Your close reason (Step 6) must list every criterion and how it was satisfied
+
+WARNING: A `--no-gui`/`--headless` test does NOT satisfy criteria mentioning GUI, visual output, or window display. If the bead says "see scrolling graph" and your only evidence is a headless test, the criterion is NOT MET.
 
 If you are running low on context:
 1. Commit your progress: `git add -A && git commit -m "[BD-XXX] WIP: partial progress, context limit"`
