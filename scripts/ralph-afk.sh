@@ -239,8 +239,8 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
         fi
 
         # Check for repeating patterns
-        THRASH_MSG=$(detect_thrashing "${FAIL_HISTORY[@]}")
-        if [ $? -eq 0 ]; then
+        THRASH_MSG=$(detect_thrashing "${FAIL_HISTORY[@]}") || true
+        if [ -n "$THRASH_MSG" ]; then
             echo "" | tee -a "$LOG_FILE"
             echo "=== RALPH THRASHING — $THRASH_MSG ===" | tee -a "$LOG_FILE"
             echo "Failure history: ${FAIL_HISTORY[*]}" | tee -a "$LOG_FILE"
