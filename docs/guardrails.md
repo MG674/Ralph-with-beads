@@ -109,7 +109,7 @@ Rules enforced by Docker container configuration and git wrapper.
 
 - Before closing a bead, list EVERY acceptance criterion from the bead description
 - For EACH criterion, state what code/test satisfies it — or acknowledge it is NOT met
-- If ANY criterion is unmet, do NOT close the bead — either implement it or leave `in_progress`
+- If ANY criterion is unmet, do NOT close the bead — either implement it, or commit WIP, leave `in_progress`, and document what remains
 - Adding a `--no-gui` / `--headless` / `--dry-run` flag does NOT satisfy criteria that mention visual output, GUI, window, or user-facing behaviour
 - The close reason must reference every acceptance criterion, not just summarise what was built
 - Source: c00 incident — Ralph closed bead claiming pipeline complete while skipping all GUI acceptance criteria
