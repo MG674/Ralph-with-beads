@@ -233,6 +233,7 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
         2>&1 | tee -a "$LOG_FILE" > "$ITER_LOG" || true
 
     RESULT=$(cat "$ITER_LOG")
+    rm -f "$ITER_LOG"
 
     # Check for completion signal
     if echo "$RESULT" | grep -q "<promise>COMPLETE</promise>"; then
