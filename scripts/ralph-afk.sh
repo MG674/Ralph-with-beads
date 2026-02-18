@@ -10,15 +10,39 @@ if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ] && [ -f "$HOME/.claude-oauth-token" ]; then
     export CLAUDE_CODE_OAUTH_TOKEN
 fi
 
-# Usage: ./ralph-afk.sh /path/to/project <max-iterations> [prompt-file]
+# Usage: ./ralph-afk.sh /path/to/project <max-iterations> [prompt-file] [--branch <name>]
 PROJECT_DIR="${1:-.}"
 if [ -z "$2" ]; then
-    echo "Usage: ./ralph-afk.sh <project-dir> <max-iterations> [prompt-file]"
+    echo "Usage: ./ralph-afk.sh <project-dir> <max-iterations> [prompt-file] [--branch <name>]"
     echo "  max-iterations is required (e.g. 10, 15, 30)"
+    echo "  --branch <name>: continue on existing branch instead of creating new one"
     exit 1
 fi
 MAX_ITERATIONS="$2"
-PROMPT_FILE="${3:-$PROJECT_DIR/prompt.md}"
+# Set prompt file: use $3 only if it is not a flag
+if [ -n "$3" ] && [[ "$3" != --* ]]; then
+    PROMPT_FILE="$3"
+else
+    PROMPT_FILE="$PROJECT_DIR/prompt.md"
+fi
+
+# Parse optional --branch flag (can appear as $3/$4 or $4/$5)
+CONTINUE_BRANCH=""
+shift 2
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --branch)
+            CONTINUE_BRANCH="$2"
+            shift 2
+            ;;
+        *)
+            if [ -z "$PROMPT_FILE" ] || [ "$PROMPT_FILE" = "$PROJECT_DIR/prompt.md" ]; then
+                PROMPT_FILE="$1"
+            fi
+            shift
+            ;;
+    esac
+done
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 # --- Input Validation ---
@@ -105,16 +129,31 @@ if ! git fetch origin 2>&1 | tee -a "$LOG_FILE"; then
     exit 1
 fi
 
-if ! git pull --rebase origin main 2>&1 | tee -a "$LOG_FILE"; then
-    echo "WARNING: Could not pull from origin/main" | tee -a "$LOG_FILE"
-    echo "You may be on a different branch or have unpushed commits." | tee -a "$LOG_FILE"
-    echo "Continuing anyway..." | tee -a "$LOG_FILE"
-fi
+if [ -n "$CONTINUE_BRANCH" ]; then
+    # Continue on existing branch
+    BRANCH_NAME="$CONTINUE_BRANCH"
+    if ! git checkout "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE"; then
+        echo "ERROR: Could not checkout branch: $BRANCH_NAME" | tee -a "$LOG_FILE"
+        exit 1
+    fi
+    if ! git pull --rebase origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE"; then
+        echo "WARNING: Could not pull from origin/$BRANCH_NAME" | tee -a "$LOG_FILE"
+        echo "Continuing with local state..." | tee -a "$LOG_FILE"
+    fi
+    echo "Continuing on branch: $BRANCH_NAME" | tee -a "$LOG_FILE"
+else
+    # Start fresh from main
+    if ! git pull --rebase origin main 2>&1 | tee -a "$LOG_FILE"; then
+        echo "WARNING: Could not pull from origin/main" | tee -a "$LOG_FILE"
+        echo "You may be on a different branch or have unpushed commits." | tee -a "$LOG_FILE"
+        echo "Continuing anyway..." | tee -a "$LOG_FILE"
+    fi
 
-# Create feature branch
-BRANCH_NAME="ralph/afk-$TIMESTAMP"
-git checkout -b "$BRANCH_NAME"
-echo "Created branch: $BRANCH_NAME" | tee -a "$LOG_FILE"
+    # Create feature branch
+    BRANCH_NAME="ralph/afk-$TIMESTAMP"
+    git checkout -b "$BRANCH_NAME"
+    echo "Created branch: $BRANCH_NAME" | tee -a "$LOG_FILE"
+fi
 echo "" | tee -a "$LOG_FILE"
 
 # --- Advanced Thrashing Detection ---
@@ -186,12 +225,14 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
     echo "Time: $(date)" | tee -a "$LOG_FILE"
 
     # Run Claude Code in Docker with timeout
-    RESULT=$(timeout 600 docker run "${DOCKER_ARGS[@]}" \
+    # Stream output to log in real-time (visible via tail -f) while capturing for signal detection
+    ITER_LOG="$PROJECT_DIR/ralph-runs/.iter-output"
+    timeout 600 docker run "${DOCKER_ARGS[@]}" \
         ralph-claude:latest \
         -c "claude --dangerously-skip-permissions --model sonnet -p \"\$(cat /prompt.md)\"" \
-        2>&1) || true
+        2>&1 | tee -a "$LOG_FILE" > "$ITER_LOG" || true
 
-    echo "$RESULT" >> "$LOG_FILE"
+    RESULT=$(cat "$ITER_LOG")
 
     # Check for completion signal
     if echo "$RESULT" | grep -q "<promise>COMPLETE</promise>"; then
@@ -255,6 +296,15 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
             exit 1
         fi
     fi
+
+    # Show what changed this iteration
+    CHANGED=$(git diff --stat HEAD 2>/dev/null || true)
+    LAST_COMMIT=$(git log --oneline -1 2>/dev/null || true)
+    if [ -n "$CHANGED" ]; then
+        echo "Uncommitted changes:" | tee -a "$LOG_FILE"
+        echo "$CHANGED" | tee -a "$LOG_FILE"
+    fi
+    echo "Last commit: $LAST_COMMIT" | tee -a "$LOG_FILE"
 
     echo "Iteration $i complete." | tee -a "$LOG_FILE"
     echo "" | tee -a "$LOG_FILE"
