@@ -56,11 +56,16 @@ Accumulated wisdom from development. Consult when working on related areas.
 
 ## Testing
 
-<!-- Testing patterns, fixture tips, common mistakes -->
-<!-- Example:
-- Pytest fixtures with cleanup must use yield, not return
-- Mock datetime.now() at the module level, not instance level
--->
+### sys.modules mocking must use patch.dict, never module-level assignment
+- Module-level `sys.modules["foo"] = mock` runs at pytest COLLECTION time, polluting all tests
+- Use `with patch.dict(sys.modules, {...}):` inside test functions/fixtures instead
+- If you need a mock for a module-level import, save/inject/import/restore immediately
+- Source: wiring AFK run — permanent matplotlib mock broke visual regression tests
+
+### type: ignore comments exist for cross-version compatibility
+- Docker runs Python 3.11; host runs Python 3.13 with stricter type stubs
+- Never remove `# type: ignore[attr-defined]` on third-party library calls (matplotlib, bleak, numpy)
+- If mypy passes without the comment in Docker, verify on host before removing
 
 ## Tools & Environment
 
