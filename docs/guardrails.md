@@ -127,3 +127,24 @@ Rules enforced by Docker container configuration and git wrapper.
 - A bead that mentions BOTH data processing AND visual rendering is too broad — split it
 - A bead with more than 5 acceptance criteria is a warning sign — consider splitting
 - Tracer bullets are especially prone to being too large because they cross all layers by definition — split into per-layer beads with dependencies
+
+## Type Annotations (Critical)
+
+### NEVER remove `# type: ignore` comments without verifying on the HOST Python version
+
+- Docker runs Python 3.11 with older type stubs; the host runs Python 3.13 with stricter stubs
+- A `# type: ignore[attr-defined]` or `# type: ignore[arg-type]` that seems unnecessary in Docker may be REQUIRED on the host
+- Before removing ANY `# type: ignore` comment: check if the underlying type error is from a third-party library (matplotlib, bleak, numpy, etc.) — if so, LEAVE IT
+- If mypy passes in Docker without the comment, it does NOT mean the host will pass — these comments exist for cross-version compatibility
+- Source: wiring AFK run — Ralph removed 15 `# type: ignore` comments that were required on host Python 3.13
+
+## Test Isolation (Critical)
+
+### NEVER write to `sys.modules` at module level in test files
+
+- Module-level `sys.modules["foo"] = mock` runs at COLLECTION TIME, before any test executes
+- This permanently replaces real modules with mocks for ALL subsequent test modules in the suite
+- Tests that pass in isolation will FAIL in the full suite due to this cross-test pollution
+- ALWAYS use `patch.dict(sys.modules, {...})` as a context manager or decorator INSIDE test functions/fixtures
+- If you need a mock module for an import at module level, save originals, inject, import, then RESTORE originals immediately
+- Source: wiring AFK run — `test_stream_player_wiring.py` injected mock matplotlib into `sys.modules` at module level, breaking visual regression tests
