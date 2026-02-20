@@ -3,10 +3,15 @@
 # All checks must pass before closing a task or committing
 set -e
 
-# Use venv tools directly if present (avoids sourcing activate script)
-if [ -d ".venv" ]; then
+# Detect Python prefix: active venv > .venv directory > system
+if [ -n "$VIRTUAL_ENV" ]; then
+    # Use the currently activated virtual environment
+    PYTHON_PREFIX="$VIRTUAL_ENV/bin/"
+elif [ -d ".venv" ]; then
+    # Fall back to project .venv directory
     PYTHON_PREFIX=".venv/bin/"
 else
+    # Fall back to system Python (assumes tools are on PATH)
     PYTHON_PREFIX=""
 fi
 
