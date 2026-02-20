@@ -57,9 +57,9 @@ If verify.sh fails:
 - **3-strike rule**: if verify.sh fails 3 times on the same issue, commit WIP, record what you tried, and bail with `<verify-fail>` — the next iteration gets a fresh context window
 - NEVER modify `verify.sh` unless the task explicitly requires it
 - NEVER modify build/tool config in `pyproject.toml` (pythonpath, requires-python, tool settings) unless the task explicitly requires it
-- NEVER work around Docker/container environment — verify.sh and project files must work both inside Docker and on the host machine
-- NEVER use hardcoded container paths (e.g. `/workspace`)
-- NEVER set PYTHONPATH — use `pip install -e .` instead
+- NEVER work around environment differences by changing project files — project files must work on the target host machine
+- NEVER use hardcoded absolute paths — code must be portable across environments
+- NEVER set PYTHONPATH to fix import issues — use `pip install -e .` instead
 - NEVER commit directly to main/master
 - Guardrails ALWAYS take precedence over lessons-learned.md
 - If a fix seems to require violating a guardrail, STOP and document the conflict
