@@ -4,7 +4,7 @@
 [Brief description of what this project does]
 
 ## Tech Stack
-- Language: Python >=3.11
+- Language: Python 3.12
 - Testing: pytest
 - Linting: ruff
 - Formatting: black
@@ -13,9 +13,9 @@
 ## Quick Reference
 
 ### Commands
-- `bash verify.sh` — Run all quality checks (MUST pass before committing)
+- `./verify.sh` — Run all quality checks (MUST pass before committing)
 - `bd ready` — Find next task to work on
-- `bd close <id> --reason "message"` — Complete a task
+- `bd close <id> "message"` — Complete a task
 - `pytest` — Run tests
 - `ruff check .` — Lint
 - `black .` — Format
@@ -30,7 +30,6 @@
 
 | Document | When to Read |
 |----------|--------------|
-| docs/prd.md | Requirements, acceptance criteria, technical approach |
 | docs/guardrails.md | ALWAYS read at start of each task |
 | docs/lessons-learned.md | When working on related areas |
 | docs/architecture.md | When making structural changes |
@@ -40,15 +39,10 @@
 - Work on branch: ralph/<feature-name>
 - Commit message format: `[BD-XXX] Brief description`
 - All commits must pass verify.sh
-- NEVER commit directly to main/master
 
 ## Beads Workflow
 1. `bd ready` — find next task
 2. `bd update <id> in_progress` — claim it
-3. Read the bead description — identify every acceptance criterion
-4. Read the key files listed in the bead
-5. Implement with TDD (test first, then code, then refactor)
-6. `bash verify.sh` — must pass before closing
-7. Self-audit: check every acceptance criterion is met
-8. `bd close <id> --reason "criterion-by-criterion close reason"` — complete it
-9. Commit immediately
+3. Implement with TDD
+4. `bd close <id> "message"` — complete it
+5. Commit immediately

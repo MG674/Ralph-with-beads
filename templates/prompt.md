@@ -5,8 +5,7 @@ You are working on [PROJECT_NAME].
 ## Context Files
 
 @CLAUDE.md
-@docs/prd.md
-@docs/architecture.md
+@prd.md
 
 ## STEP 0: GUARDRAILS PRE-FLIGHT (MANDATORY)
 
@@ -28,13 +27,12 @@ Priority order:
    - If ALL beads are closed → output `<promise>COMPLETE</promise>` and STOP
    - If some beads are open but ALL are blocked → output `<promise>BLOCKED</promise>` with explanation of what's blocking, and STOP
 
-## STEP 2: UNDERSTAND AND CLAIM THE TASK
+## STEP 2: UNDERSTAND THE TASK
 
-1. Claim the bead: `bd update <id> in_progress` (skip if already `in_progress`)
-2. Read the bead description carefully — identify every acceptance criterion
-3. Read the key files listed in the bead description
-4. Check dependencies and related beads
-5. If the bead is `in_progress` (resumed from previous iteration), check git log and existing code to understand what was already done — do NOT redo completed work
+1. Read the bead description carefully
+2. Identify acceptance criteria
+3. Check dependencies and related beads
+4. If the bead is `in_progress` (resumed from previous iteration), check git log and existing code to understand what was already done
 
 ## STEP 3: IMPLEMENT WITH TDD
 
@@ -112,9 +110,9 @@ Output nothing further. The loop script will invoke you again.
 - **3-strike rule**: if verify.sh fails 3 times on the same issue, commit WIP, record what you tried, and bail with `<verify-fail>` — the next iteration gets a fresh context window
 - NEVER modify `verify.sh` unless the task explicitly requires it
 - NEVER modify build/tool config in `pyproject.toml` (pythonpath, requires-python, tool settings) unless the task explicitly requires it
-- NEVER work around environment differences by changing project files — project files must work on the target host machine
-- NEVER use hardcoded absolute paths — code must be portable across environments
-- NEVER set PYTHONPATH to fix import issues — use `pip install -e .` instead
+- NEVER work around Docker/container environment — verify.sh and project files must work both inside Docker and on the host machine
+- NEVER use hardcoded container paths (e.g. `/workspace`)
+- NEVER set PYTHONPATH — use `pip install -e .` instead
 - NEVER commit directly to main/master
 - Guardrails ALWAYS take precedence over lessons-learned.md
 - If a fix seems to require violating a guardrail, STOP and document the conflict

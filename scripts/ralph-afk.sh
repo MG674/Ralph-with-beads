@@ -102,7 +102,6 @@ touch "$PROJECT_DIR/ralph-runs/git-audit.log"
 
 echo "=== RALPH AFK — $MAX_ITERATIONS iterations ===" | tee "$LOG_FILE"
 echo "Project: $PROJECT_DIR" | tee -a "$LOG_FILE"
-echo "Prompt: $PROMPT_FILE" | tee -a "$LOG_FILE"
 echo "Started: $(date)" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
