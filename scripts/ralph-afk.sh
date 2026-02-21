@@ -249,7 +249,9 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
     ITER_LOG="$PROJECT_DIR/ralph-runs/.iter-output"
     timeout 600 docker run "${DOCKER_ARGS[@]}" \
         ralph-claude:latest \
-        -c "claude --dangerously-skip-permissions --model sonnet -p \"\${LABEL_PREAMBLE:+\$LABEL_PREAMBLE\$'\\n\\n'}\$(cat /prompt.md)\"" \
+        -c 'claude --dangerously-skip-permissions --model sonnet -p "$1$(cat /prompt.md)"' _ "${LABEL_PREAMBLE:+$LABEL_PREAMBLE
+
+}" \
         2>&1 | tee -a "$LOG_FILE" > "$ITER_LOG" || true
 
     RESULT=$(cat "$ITER_LOG")

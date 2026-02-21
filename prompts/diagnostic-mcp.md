@@ -28,7 +28,7 @@ Print what you see in the screenshot:
 - Any other notable UI elements
 
 ## Step 6
-Kill the app by running: `taskkill //F //IM python.exe`
+Kill the app by running: `powershell -Command "Get-Process python -ErrorAction SilentlyContinue | Where-Object {$_.MainWindowTitle -ne ''} | Stop-Process -Force"`
 
 ## Step 7
 Print exactly: "MCP GUI diagnostic complete"
