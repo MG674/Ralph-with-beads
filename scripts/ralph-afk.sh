@@ -10,39 +10,44 @@ if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ] && [ -f "$HOME/.claude-oauth-token" ]; then
     export CLAUDE_CODE_OAUTH_TOKEN
 fi
 
-# Usage: ./ralph-afk.sh /path/to/project <max-iterations> [prompt-file] [--branch <name>]
+# Usage: ./ralph-afk.sh /path/to/project <max-iterations> <prompt-file> --label <label> [--branch <name>]
 PROJECT_DIR="${1:-.}"
-if [ -z "$2" ]; then
-    echo "Usage: ./ralph-afk.sh <project-dir> <max-iterations> [prompt-file] [--branch <name>]"
+if [ -z "$2" ] || [ -z "$3" ]; then
+    echo "Usage: ./ralph-afk.sh <project-dir> <max-iterations> <prompt-file> --label <label> [--branch <name>]"
     echo "  max-iterations is required (e.g. 10, 15, 30)"
+    echo "  prompt-file is required (path to prompt .md file)"
+    echo "  --label <label>: bead label filter (e.g. omarchy, windows-mcp, all)"
     echo "  --branch <name>: continue on existing branch instead of creating new one"
     exit 1
 fi
 MAX_ITERATIONS="$2"
-# Set prompt file: use $3 only if it is not a flag
-if [ -n "$3" ] && [[ "$3" != --* ]]; then
-    PROMPT_FILE="$3"
-else
-    PROMPT_FILE="$PROJECT_DIR/prompt.md"
-fi
+PROMPT_FILE="$3"
 
-# Parse optional --branch flag (can appear as $3/$4 or $4/$5)
+# Parse flags
 CONTINUE_BRANCH=""
-shift 2
+MACHINE_LABEL=""
+shift 3
 while [ $# -gt 0 ]; do
     case "$1" in
         --branch)
             CONTINUE_BRANCH="$2"
             shift 2
             ;;
+        --label)
+            MACHINE_LABEL="$2"
+            shift 2
+            ;;
         *)
-            if [ -z "$PROMPT_FILE" ] || [ "$PROMPT_FILE" = "$PROJECT_DIR/prompt.md" ]; then
-                PROMPT_FILE="$1"
-            fi
             shift
             ;;
     esac
 done
+
+# Validate --label is provided
+if [ -z "$MACHINE_LABEL" ]; then
+    echo "ERROR: --label is required (e.g. --label omarchy, --label windows-mcp, --label all)"
+    exit 1
+fi
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 # --- Input Validation ---
@@ -103,6 +108,7 @@ touch "$PROJECT_DIR/ralph-runs/git-audit.log"
 echo "=== RALPH AFK — $MAX_ITERATIONS iterations ===" | tee "$LOG_FILE"
 echo "Project: $PROJECT_DIR" | tee -a "$LOG_FILE"
 echo "Prompt: $PROMPT_FILE" | tee -a "$LOG_FILE"
+echo "Label filter: $MACHINE_LABEL" | tee -a "$LOG_FILE"
 echo "Started: $(date)" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
@@ -219,6 +225,18 @@ if [ -n "$ANTHROPIC_API_KEY" ]; then
     DOCKER_ARGS+=(-e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY")
 fi
 
+# --- Label Filter Preamble ---
+
+LABEL_PREAMBLE=""
+if [ "$MACHINE_LABEL" != "all" ]; then
+    LABEL_PREAMBLE="IMPORTANT: You are running on a machine assigned label '$MACHINE_LABEL'. Only work on beads with this label. When running bd list commands, always add '-l $MACHINE_LABEL' (e.g. 'bd list --ready -l $MACHINE_LABEL --json'). If no beads with this label are available or ready, output <promise>BLOCKED</promise> and stop."
+fi
+
+# Pass label preamble into Docker as env var
+if [ -n "$LABEL_PREAMBLE" ]; then
+    DOCKER_ARGS+=(-e LABEL_PREAMBLE="$LABEL_PREAMBLE")
+fi
+
 # --- Main Loop ---
 
 for ((i=1; i<=MAX_ITERATIONS; i++)); do
@@ -227,10 +245,13 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
 
     # Run Claude Code in Docker with timeout
     # Stream output to log in real-time (visible via tail -f) while capturing for signal detection
+    # Label preamble is prepended to prompt content if set
     ITER_LOG="$PROJECT_DIR/ralph-runs/.iter-output"
     timeout 600 docker run "${DOCKER_ARGS[@]}" \
         ralph-claude:latest \
-        -c "claude --dangerously-skip-permissions --model sonnet -p \"\$(cat /prompt.md)\"" \
+        -c 'claude --dangerously-skip-permissions --model sonnet -p "$1$(cat /prompt.md)"' _ "${LABEL_PREAMBLE:+$LABEL_PREAMBLE
+
+}" \
         2>&1 | tee -a "$LOG_FILE" > "$ITER_LOG" || true
 
     RESULT=$(cat "$ITER_LOG")

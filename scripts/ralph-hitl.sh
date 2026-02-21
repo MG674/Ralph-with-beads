@@ -10,9 +10,36 @@ if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ] && [ -f "$HOME/.claude-oauth-token" ]; then
     export CLAUDE_CODE_OAUTH_TOKEN
 fi
 
-# Usage: ./ralph-hitl.sh /path/to/project [prompt-file]
+# Usage: ./ralph-hitl.sh /path/to/project <prompt-file> --label <label>
 PROJECT_DIR="${1:-.}"
-PROMPT_FILE="${2:-$PROJECT_DIR/prompt.md}"
+if [ -z "$2" ]; then
+    echo "Usage: ./ralph-hitl.sh <project-dir> <prompt-file> --label <label>"
+    echo "  prompt-file is required (path to prompt .md file)"
+    echo "  --label <label>: bead label filter (e.g. omarchy, windows-mcp, all)"
+    exit 1
+fi
+PROMPT_FILE="$2"
+
+# Parse flags
+MACHINE_LABEL=""
+shift 2
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --label)
+            MACHINE_LABEL="$2"
+            shift 2
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
+# Validate --label is provided
+if [ -z "$MACHINE_LABEL" ]; then
+    echo "ERROR: --label is required (e.g. --label omarchy, --label windows-mcp, --label all)"
+    exit 1
+fi
 
 # --- Input Validation ---
 
@@ -143,9 +170,24 @@ if [ -n "$ANTHROPIC_API_KEY" ]; then
     DOCKER_ARGS+=(-e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY")
 fi
 
+# --- Label Filter Preamble ---
+
+LABEL_PREAMBLE=""
+if [ "$MACHINE_LABEL" != "all" ]; then
+    LABEL_PREAMBLE="IMPORTANT: You are running on a machine assigned label '$MACHINE_LABEL'. Only work on beads with this label. When running bd list commands, always add '-l $MACHINE_LABEL' (e.g. 'bd list --ready -l $MACHINE_LABEL --json'). If no beads with this label are available or ready, output <promise>BLOCKED</promise> and stop."
+fi
+
+if [ -n "$LABEL_PREAMBLE" ]; then
+    DOCKER_ARGS+=(-e LABEL_PREAMBLE="$LABEL_PREAMBLE")
+fi
+
 docker run "${DOCKER_ARGS[@]}" \
     ralph-claude:latest \
-    -c "claude --dangerously-skip-permissions --model sonnet -p \"\$(echo 'IMPORTANT: Read docs/guardrails.md FIRST. Guardrails ALWAYS take precedence over docs/lessons-learned.md. If a fix requires violating a guardrail, STOP and document the conflict.' && echo && cat /prompt.md)\""
+    -c 'claude --dangerously-skip-permissions --model sonnet -p "${1}IMPORTANT: Read docs/guardrails.md FIRST. Guardrails ALWAYS take precedence over docs/lessons-learned.md. If a fix requires violating a guardrail, STOP and document the conflict.
+
+$(cat /prompt.md)"' _ "${LABEL_PREAMBLE:+$LABEL_PREAMBLE
+
+}"
 
 echo ""
 echo "=== Iteration complete ==="
