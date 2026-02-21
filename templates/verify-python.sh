@@ -4,7 +4,7 @@
 set -e
 
 # Detect Python prefix: active venv > .venv directory > system
-if [ -n "$VIRTUAL_ENV" ]; then
+if [ -n "$VIRTUAL_ENV" ] && [[ "$VIRTUAL_ENV" =~ ^[a-zA-Z0-9_/\ .-]+$ ]]; then
     # Use the currently activated virtual environment
     PYTHON_PREFIX="$VIRTUAL_ENV/bin/"
 elif [ -d ".venv" ]; then

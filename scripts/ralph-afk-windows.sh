@@ -95,13 +95,28 @@ echo "Prompt: $PROMPT_FILE" | tee -a "$LOG_FILE"
 echo "Started: $(date)" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
+# --- Helper: Safe push (refuses main/master) ---
+
+_safe_push() {
+    if [[ "$BRANCH_NAME" == "main" || "$BRANCH_NAME" == "master" ]]; then
+        echo "ERROR: Cannot push directly to main/master" | tee -a "$LOG_FILE"
+        return 1
+    fi
+    git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE"
+}
+
+# --- Helper: Kill stale python windows ---
+
+_kill_stale_python_windows() {
+    powershell -Command 'Get-Process python -ErrorAction SilentlyContinue | Where-Object {$_.MainWindowTitle -ne ""} | Stop-Process -Force' 2>/dev/null || true
+}
+
 # --- Cleanup Trap ---
-# Kill stale python processes (app windows) on exit
 
 cleanup() {
     local exit_code=$?
     echo "Cleaning up stale app instances..." | tee -a "$LOG_FILE"
-    powershell -Command 'Get-Process python -ErrorAction SilentlyContinue | Where-Object {$_.MainWindowTitle -ne ""} | Stop-Process -Force' 2>/dev/null || true
+    _kill_stale_python_windows
     exit $exit_code
 }
 trap cleanup EXIT INT TERM
@@ -172,7 +187,7 @@ detect_thrashing() {
 
 kill_stale_app() {
     echo "Killing stale app instances..." | tee -a "$LOG_FILE"
-    powershell -Command 'Get-Process python -ErrorAction SilentlyContinue | Where-Object {$_.MainWindowTitle -ne ""} | Stop-Process -Force' 2>/dev/null || true
+    _kill_stale_python_windows
     sleep 2
 }
 
@@ -187,7 +202,7 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
     # Kill any stale app windows from previous iteration
     kill_stale_app
 
-    # Read prompt file content
+    # Read prompt file content (prompt files are ~2-5KB; claude -p requires inline text)
     PROMPT_CONTENT=$(cat "$PROMPT_FILE")
 
     # Run Claude Code natively (no Docker) with timeout
@@ -208,7 +223,7 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
         echo "Finished: $(date)" | tee -a "$LOG_FILE"
 
         echo "Pushing branch for PR..." | tee -a "$LOG_FILE"
-        git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE"
+        _safe_push
 
         echo "" | tee -a "$LOG_FILE"
         echo "Branch pushed. Create PR to review progress." | tee -a "$LOG_FILE"
@@ -221,7 +236,7 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
         echo "=== RALPH BLOCKED at iteration $i ===" | tee -a "$LOG_FILE"
         echo "Finished: $(date)" | tee -a "$LOG_FILE"
 
-        git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE" || true
+        _safe_push || true
         exit 1
     fi
 
@@ -241,7 +256,7 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
             echo "Failure history: ${FAIL_HISTORY[*]}" | tee -a "$LOG_FILE"
             echo "Finished: $(date)" | tee -a "$LOG_FILE"
 
-            git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE" || true
+            _safe_push || true
             exit 1
         fi
     fi
@@ -265,5 +280,5 @@ done
 echo "=== RALPH FINISHED — max iterations ($MAX_ITERATIONS) reached ===" | tee -a "$LOG_FILE"
 echo "Finished: $(date)" | tee -a "$LOG_FILE"
 
-git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE" || true
+_safe_push || true
 echo "Branch pushed. Create PR to review progress." | tee -a "$LOG_FILE"
