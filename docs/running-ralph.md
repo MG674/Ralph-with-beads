@@ -319,7 +319,7 @@ git commit -m "fix: revert Docker workarounds in verify.sh/pyproject.toml"
 Ralph on Docker (Python 3.11) has looser type stubs than the host (Python 3.13). Ralph frequently removes `# type: ignore` comments that are needed on the host, causing mypy failures.
 
 ```bash
-git diff main -- '*.py' | grep 'type: ignore'
+git diff main -- '*.py' | grep '^-.*type: ignore'
 ```
 
 If you see removals, restore them. This has happened on every Omarchy run so far (PR #47, PR #65 — 16 removed in one run).
@@ -414,7 +414,7 @@ bash ralph-with-beads/scripts/ralph-afk-windows.sh ergofigure-eye-demonstration 
 # Break it up:
 S=ralph-with-beads/scripts/ralph-afk-windows.sh
 P=ergofigure-eye-demonstration
-bash $S $P 29 $P/prompt-mcp.md --label windows-mcp
+bash "$S" "$P" 29 "$P/prompt-mcp.md" --label windows-mcp
 ```
 
 ### `grep -oP` crashes MSYS2 CLANGARM64
