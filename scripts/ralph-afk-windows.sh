@@ -255,7 +255,7 @@ $PROMPT_CONTENT"
     fi
 
     # Extract current failure for thrashing detection
-    CURRENT_FAIL=$(echo "$RESULT" | grep -oP '(?<=<verify-fail>).*(?=</verify-fail>)' | tail -1)
+    CURRENT_FAIL=$(echo "$RESULT" | sed -n 's/.*<verify-fail>\(.*\)<\/verify-fail>.*/\1/p' | tail -1)
 
     if [ -n "$CURRENT_FAIL" ]; then
         FAIL_HISTORY+=("$CURRENT_FAIL")
