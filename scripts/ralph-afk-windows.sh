@@ -2,7 +2,7 @@
 # ralph-afk-windows.sh - AFK Ralph for Windows (Git Bash)
 # Runs claude -p natively instead of Docker. MCP servers available.
 # Use for visual phases requiring windows-mcp GUI validation.
-set -e
+set -eo pipefail
 
 # Usage: ./ralph-afk-windows.sh /path/to/project <max-iterations> [prompt-file] [--branch <name>]
 PROJECT_DIR="${1:-.}"
