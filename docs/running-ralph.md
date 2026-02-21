@@ -216,6 +216,45 @@ git push origin --delete ralph/afk-<timestamp>
 
 **Verified working:** 2026-02-21. Claude Code 2.1.50, bd 0.55.4, Python 3.13.7 native.
 
+### Choosing the Right Prompt File
+
+Each project has two prompt files:
+
+| Prompt | When to Use |
+|--------|------------|
+| `prompt.md` | Standard TDD loop. No GUI testing. Use for Omarchy or headless-only beads. |
+| `prompt-mcp.md` | TDD + MCP visual validation (Step 5). Has Snapshot/Click/Type/Shortcut/Wait allowlist. **Required for `windows-mcp` labelled beads.** |
+
+**CRITICAL:** The `--label windows-mcp` flag only filters which beads Ralph picks up. It does NOT enable MCP testing — the prompt file controls that. If you launch with `--label windows-mcp` but pass `prompt.md`, Ralph will do standard TDD only and skip all visual verification.
+
+```bash
+# WRONG — windows-mcp beads but no GUI testing:
+bash ralph-afk-windows.sh project 10 project/prompt.md --label windows-mcp
+
+# RIGHT — windows-mcp beads WITH GUI testing:
+bash ralph-afk-windows.sh project 10 project/prompt-mcp.md --label windows-mcp
+```
+
+Template source for new projects: `ralph-with-beads/templates/prompt-mcp.md`.
+
+### Stopping Ralph Gracefully Between Iterations
+
+There is no built-in stop file mechanism. To stop Ralph cleanly after the current iteration finishes:
+
+**Rename the prompt file:**
+```bash
+mv prompt.md prompt.md.paused          # or prompt-mcp.md
+```
+
+**How it works:** The AFK script re-reads the prompt file via `cat` at the start of each iteration. With `set -eo pipefail`, the `cat` failure exits the script immediately — before any new work begins. The current iteration finishes completely (commits, logs, bead closure), then the script dies cleanly at the top of the next iteration.
+
+**Restore when ready to restart:**
+```bash
+mv prompt.md.paused prompt.md
+```
+
+**Why not Ctrl+C or kill?** Killing mid-iteration risks uncommitted changes, half-written files, or open beads left `in_progress`. The rename trick guarantees a clean boundary.
+
 ### Known Issues
 
 - **Nested session detection**: `claude -p` refuses to run inside an existing Claude Code session. Always run from a separate terminal. Error: "Claude Code cannot be launched inside another Claude Code session."
@@ -223,6 +262,7 @@ git push origin --delete ralph/afk-<timestamp>
 - **Ctrl+C may not kill Claude**: If the script hangs, use `taskkill //F //IM claude.exe` from another terminal.
 - **bd Dolt JSONL changes**: bd v0.55.4 (Dolt backend) may modify `.beads/issues.jsonl` during runs. The push step may fail with "uncommitted changes detected". Restore with `git checkout -- .beads/issues.jsonl` after.
 - **Prompt file is required**: All scripts now require the prompt file as a positional argument and error if missing. See [#50](https://github.com/MG674/Ralph-with-beads/issues/50) for context.
+- **Wrong prompt = no MCP testing**: Incident 2026-02-21 — 5 iterations ran with `prompt.md` instead of `prompt-mcp.md` on `windows-mcp` beads. Ralph completed beads with TDD only, no visual verification. Always double-check the prompt file matches the label.
 
 ---
 
@@ -238,3 +278,218 @@ git push origin --delete ralph/afk-<timestamp>
 | MCP | Not available | windows-mcp for GUI testing |
 | Script | `ralph-afk.sh` | `ralph-afk-windows.sh` |
 | Kill stuck process | `docker kill` | `taskkill //F //IM claude.exe` |
+
+---
+
+## Before Starting an AFK Run (Checklist)
+
+Run through this every time before launching Ralph:
+
+1. **Commit or stash all changes** — unstaged changes cause `git pull --rebase` to fail at script startup
+2. **Check you're on the right branch** (or let the script create a new one)
+3. **Match prompt to label:**
+   - `--label omarchy` → `prompt.md`
+   - `--label windows-mcp` → `prompt-mcp.md`
+4. **Ensure venv is clean** — if you recently switched branches, recreate it (see "Stale venv" below)
+5. **Desktop unlocked** (Windows MCP only) — Ralph needs screen access for Snapshot/Click/Type
+6. **Run from a separate terminal** (Windows only) — NOT from inside Claude Code
+
+---
+
+## After an AFK Run (Post-AFK Checklist)
+
+Run through this every time after Ralph finishes, before creating a PR:
+
+### 1. Check for Docker workarounds (Omarchy runs)
+
+Ralph in Docker sometimes modifies `verify.sh` or `pyproject.toml` to work around the container environment (e.g. adding `PYTHONPATH`, changing `requires-python`, skipping checks). These changes break the host.
+
+```bash
+git diff main -- verify.sh pyproject.toml
+```
+
+If either file was modified and the changes look Docker-specific, revert them:
+```bash
+git checkout main -- verify.sh pyproject.toml
+git commit -m "fix: revert Docker workarounds in verify.sh/pyproject.toml"
+```
+
+### 2. Check for removed `# type: ignore` comments
+
+Ralph on Docker (Python 3.11) has looser type stubs than the host (Python 3.13). Ralph frequently removes `# type: ignore` comments that are needed on the host, causing mypy failures.
+
+```bash
+git diff main -- '*.py' | grep 'type: ignore'
+```
+
+If you see removals, restore them. This has happened on every Omarchy run so far (PR #47, PR #65 — 16 removed in one run).
+
+### 3. Check Gemini review comments
+
+If the repo has Gemini code review enabled, check its comments after pushing:
+
+```bash
+gh pr view <PR> --repo <owner>/<repo> --comments
+```
+
+**Gotchas:**
+- **Stale diffs**: Gemini sometimes reviews an old diff. Check comment timestamps vs the latest commit timestamp before acting on feedback.
+- **False positives**: Gemini once flagged today's date as a "future date." Always sanity-check before making changes.
+
+### 4. Recreate the venv
+
+Ralph's branch may have added/changed dependencies. Recreate from scratch:
+
+```bash
+rm -rf .venv
+python3 -m venv .venv
+.venv/bin/pip install -e '.[dev]'     # Linux
+.venv/Scripts/pip install -e '.[dev]'  # Windows
+```
+
+### 5. Run verify.sh on the host
+
+```bash
+bash verify.sh
+```
+
+This catches Python 3.13 incompatibilities that passed in Docker's Python 3.11 (see "Python 3.13 test failures" below).
+
+### 6. Fix issues and commit
+
+If any checks above found problems, fix them, commit, and push to the branch before creating the PR.
+
+---
+
+## Common Ralph Behaviours to Watch For
+
+### Ralph removes `# type: ignore` comments
+
+**What happens:** Docker's Python 3.11 has looser type stubs. Ralph sees `# type: ignore` as unnecessary and removes them. On the host (Python 3.13), mypy then fails.
+
+**How to catch:** Step 2 of the post-AFK checklist.
+
+**Prevention:** A guardrail was added to `docs/guardrails.md` (PR #47) telling Ralph not to remove them. Ralph still does it sometimes.
+
+### Ralph modifies verify.sh / pyproject.toml for Docker
+
+**What happens:** Ralph encounters a Docker-specific issue (wrong Python path, missing tool) and "fixes" it by modifying `verify.sh` or `pyproject.toml`. These changes break the host build.
+
+**Incident:** 2026-02-14. Ralph modified verify.sh to work around Docker paths. Host verify.sh broke. Had to revert.
+
+**Prevention:** Guardrails in `prompt.md` explicitly forbid modifying these files unless the task requires it.
+
+### Ralph test quality on Python 3.13
+
+**What happens:** Ralph writes tests that pass on Docker's Python 3.11 but fail on the host's Python 3.13. Common patterns:
+
+- **Wrong enum names**: Python 3.13 changed some enum `repr()` output
+- **MagicMock as random seed**: Python 3.13 rejects non-numeric seeds; 3.11 was permissive
+- **Async timing differences**: Tests with tight timing assumptions fail on different Python versions
+
+**How to catch:** Step 5 of the post-AFK checklist (`bash verify.sh` on host).
+
+### Ralph commits to the wrong branch
+
+**What happens:** If the working directory is checked out on branch A but the script was told to continue branch B, Ralph may end up committing to branch A.
+
+**Incident:** 2026-02-21. Windows Ralph was supposed to work on `ralph/afk-20260221_154238` but committed iterations 2-5 onto the Omarchy branch (`ralph/afk-20260221_152343`).
+
+**Prevention:** Before starting, verify `git branch` shows the expected branch. If using `--branch`, ensure that branch exists and is checked out. Clean up stale branches from previous runs.
+
+---
+
+## Git Bash Tips (Windows)
+
+### Line breaks break long commands
+
+Git Bash on Windows wraps long lines visually, but if you paste a multi-line command from documentation, the line breaks become literal newlines and break argument parsing.
+
+**Fix:** Use shell variables to shorten the command:
+
+```bash
+# Instead of pasting this monster:
+bash ralph-with-beads/scripts/ralph-afk-windows.sh ergofigure-eye-demonstration 29 ergofigure-eye-demonstration/prompt-mcp.md --label windows-mcp
+
+# Break it up:
+S=ralph-with-beads/scripts/ralph-afk-windows.sh
+P=ergofigure-eye-demonstration
+bash $S $P 29 $P/prompt-mcp.md --label windows-mcp
+```
+
+### `grep -oP` crashes MSYS2 CLANGARM64
+
+On Windows ARM (MSYS2 CLANGARM64), `grep -oP` returning exit code 1 (no match) inside `$(...)` command substitution with `set -eo pipefail` crashes the entire bash session — not just the command, the whole terminal.
+
+**Fix:** Use `sed -n` instead of `grep -oP`:
+
+```bash
+# BROKEN on Windows ARM:
+RESULT=$(echo "$TEXT" | grep -oP '(?<=<tag>).*(?=</tag>)')
+
+# WORKS everywhere:
+RESULT=$(echo "$TEXT" | sed -n 's/.*<tag>\(.*\)<\/tag>.*/\1/p')
+```
+
+This fix was applied to `ralph-afk-windows.sh` line 258 (thrashing detection).
+
+### Stale venv after branch switching
+
+After `git checkout` to a different branch, `.venv/bin/black`, `.venv/bin/ruff`, etc. may point to stale package installs from the previous branch's dependencies.
+
+**Fix:** Delete and recreate:
+
+```bash
+rm -rf .venv
+python3 -m venv .venv
+.venv/Scripts/pip install -e '.[dev]'
+```
+
+---
+
+## Branch Cleanup After PR Merge
+
+GitHub squash-merge creates a new commit hash, so `git branch -d` fails with "not fully merged" even though the PR is merged.
+
+**Always use `-D` (force delete) after confirming the PR is merged:**
+
+```bash
+# Verify PR is merged first
+gh pr view <number> --repo <owner>/<repo> --json state --jq '.state'
+
+# Then force-delete local branches
+git branch -D ralph/afk-<timestamp>
+
+# Delete remote branches
+git push origin --delete ralph/afk-<timestamp>
+```
+
+---
+
+## MCP GUI Testing Notes (Windows Only)
+
+### Desktop must be unlocked
+
+MCP tools (Snapshot, Click, Type) interact with the actual Windows desktop. The screen must be:
+- Unlocked (not at lock screen)
+- Not asleep
+- Accessible (no full-screen app blocking)
+
+If Ralph is running AFK with MCP and the screen locks, all visual validation steps will fail.
+
+### Focus contention protocol (interactive sessions)
+
+When a human operator and Claude both need the GUI:
+
+1. Claude proposes a sequence of actions
+2. Human says "go" and takes hands off keyboard/mouse
+3. Claude executes all steps autonomously
+4. Claude takes a final screenshot for verification
+5. Claude returns focus to the terminal
+6. Human reviews Claude's summary
+
+**Key principle:** The human cannot see Claude's output while Claude controls the GUI (switching to terminal steals focus). Agree on actions BEFORE starting.
+
+### customtkinter accessibility limitations
+
+customtkinter buttons appear as **unnamed** in the accessibility tree — no labels exposed. Ralph must rely on vision (screenshots) + coordinates for precise interaction, not accessibility tree element names.
