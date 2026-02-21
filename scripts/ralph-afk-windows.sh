@@ -4,39 +4,44 @@
 # Use for visual phases requiring windows-mcp GUI validation.
 set -eo pipefail
 
-# Usage: ./ralph-afk-windows.sh /path/to/project <max-iterations> [prompt-file] [--branch <name>]
+# Usage: ./ralph-afk-windows.sh /path/to/project <max-iterations> <prompt-file> --label <label> [--branch <name>]
 PROJECT_DIR="${1:-.}"
-if [ -z "$2" ]; then
-    echo "Usage: ./ralph-afk-windows.sh <project-dir> <max-iterations> [prompt-file] [--branch <name>]"
+if [ -z "$2" ] || [ -z "$3" ]; then
+    echo "Usage: ./ralph-afk-windows.sh <project-dir> <max-iterations> <prompt-file> --label <label> [--branch <name>]"
     echo "  max-iterations is required (e.g. 10, 15, 30)"
+    echo "  prompt-file is required (path to prompt .md file)"
+    echo "  --label <label>: bead label filter (e.g. omarchy, windows-mcp, all)"
     echo "  --branch <name>: continue on existing branch instead of creating new one"
     exit 1
 fi
 MAX_ITERATIONS="$2"
-# Set prompt file: use $3 only if it is not a flag
-if [ -n "$3" ] && [[ "$3" != --* ]]; then
-    PROMPT_FILE="$3"
-else
-    PROMPT_FILE="$PROJECT_DIR/prompt.md"
-fi
+PROMPT_FILE="$3"
 
-# Parse optional --branch flag
+# Parse flags
 CONTINUE_BRANCH=""
-shift 2
+MACHINE_LABEL=""
+shift 3
 while [ $# -gt 0 ]; do
     case "$1" in
         --branch)
             CONTINUE_BRANCH="$2"
             shift 2
             ;;
+        --label)
+            MACHINE_LABEL="$2"
+            shift 2
+            ;;
         *)
-            if [ -z "$PROMPT_FILE" ] || [ "$PROMPT_FILE" = "$PROJECT_DIR/prompt.md" ]; then
-                PROMPT_FILE="$1"
-            fi
             shift
             ;;
     esac
 done
+
+# Validate --label is provided
+if [ -z "$MACHINE_LABEL" ]; then
+    echo "ERROR: --label is required (e.g. --label omarchy, --label windows-mcp, --label all)"
+    exit 1
+fi
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 # --- Input Validation ---
@@ -92,6 +97,7 @@ touch "$PROJECT_DIR/ralph-runs/git-audit.log"
 echo "=== RALPH AFK (Windows) — $MAX_ITERATIONS iterations ===" | tee "$LOG_FILE"
 echo "Project: $PROJECT_DIR" | tee -a "$LOG_FILE"
 echo "Prompt: $PROMPT_FILE" | tee -a "$LOG_FILE"
+echo "Label filter: $MACHINE_LABEL" | tee -a "$LOG_FILE"
 echo "Started: $(date)" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
@@ -204,6 +210,14 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
 
     # Read prompt file content (prompt files are ~2-5KB; claude -p requires inline text)
     PROMPT_CONTENT=$(cat "$PROMPT_FILE")
+
+    # Inject machine label filter into prompt
+    if [ "$MACHINE_LABEL" != "all" ]; then
+        LABEL_PREAMBLE="IMPORTANT: You are running on a machine assigned label '$MACHINE_LABEL'. Only work on beads with this label. When running bd list commands, always add '-l $MACHINE_LABEL' (e.g. 'bd list --ready -l $MACHINE_LABEL --json'). If no beads with this label are available or ready, output <promise>BLOCKED</promise> and stop."
+        PROMPT_CONTENT="$LABEL_PREAMBLE
+
+$PROMPT_CONTENT"
+    fi
 
     # Run Claude Code natively (no Docker) with timeout
     # --dangerously-skip-permissions: non-interactive

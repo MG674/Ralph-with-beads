@@ -52,26 +52,28 @@ The token is passed into Docker via `-e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OA
 
 ### Running
 
+All scripts require `--label` to keep machines in their own lanes. Use `omarchy` for this machine, `windows-mcp` for Windows, or `all` to disable filtering.
+
 **AFK (autonomous loop):**
 ```bash
-# Basic — creates new branch, runs N iterations
-bash ~/projects/ralph-with-beads/scripts/ralph-afk.sh ~/projects/ergofigure-eye-demonstration 10
+# Basic — creates new branch, runs N iterations (omarchy beads only)
+bash ~/projects/ralph-with-beads/scripts/ralph-afk.sh ~/projects/ergofigure-eye-demonstration 10 ~/projects/ergofigure-eye-demonstration/prompt.md --label omarchy
 
 # Continue on existing branch
-bash ~/projects/ralph-with-beads/scripts/ralph-afk.sh ~/projects/ergofigure-eye-demonstration 10 --branch ralph/afk-20260221_141836
+bash ~/projects/ralph-with-beads/scripts/ralph-afk.sh ~/projects/ergofigure-eye-demonstration 10 ~/projects/ergofigure-eye-demonstration/prompt.md --label omarchy --branch ralph/afk-20260221_141836
 
-# Custom prompt (e.g. fix a GH issue instead of beads)
-bash ~/projects/ralph-with-beads/scripts/ralph-afk.sh ~/projects/ergofigure-eye-demonstration 1 fix-pr25-reviews.md
+# Custom prompt (e.g. fix a GH issue — use "all" label since not bead-filtered)
+bash ~/projects/ralph-with-beads/scripts/ralph-afk.sh ~/projects/ergofigure-eye-demonstration 1 fix-pr25-reviews.md --label all
 ```
 
 **HITL (single iteration, interactive):**
 ```bash
-bash ~/projects/ralph-with-beads/scripts/ralph-hitl.sh ~/projects/ergofigure-eye-demonstration
+bash ~/projects/ralph-with-beads/scripts/ralph-hitl.sh ~/projects/ergofigure-eye-demonstration ~/projects/ergofigure-eye-demonstration/prompt.md --label omarchy
 ```
 
 **Via tmux (survives SSH disconnect):**
 ```bash
-tmux new -d -s ralph 'source ~/.bashrc && bash ~/projects/ralph-with-beads/scripts/ralph-afk.sh ~/projects/ergofigure-eye-demonstration 10'
+tmux new -d -s ralph 'source ~/.bashrc && bash ~/projects/ralph-with-beads/scripts/ralph-afk.sh ~/projects/ergofigure-eye-demonstration 10 ~/projects/ergofigure-eye-demonstration/prompt.md --label omarchy'
 ```
 
 ### Logs
@@ -86,7 +88,7 @@ tail -f ~/projects/ergofigure-eye-demonstration/ralph-runs/ralph-*.log
 Use the diagnostic test prompt (`prompts/diagnostic-test.md`) to verify Docker, auth, and bd without doing any real work:
 
 ```bash
-bash ~/projects/ralph-with-beads/scripts/ralph-afk.sh ~/projects/ergofigure-eye-demonstration 1 ~/projects/ralph-with-beads/prompts/diagnostic-test.md
+bash ~/projects/ralph-with-beads/scripts/ralph-afk.sh ~/projects/ergofigure-eye-demonstration 1 ~/projects/ralph-with-beads/prompts/diagnostic-test.md --label all
 ```
 
 Expected outcome:
@@ -160,19 +162,21 @@ Alternative: set `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` as environment
 
 **Important:** Cannot run from inside a Claude Code session (nested session detection). Always use a separate terminal.
 
+All scripts require `--label` to keep machines in their own lanes. Use `windows-mcp` for this machine, `omarchy` for Omarchy, or `all` to disable filtering.
+
 **AFK (autonomous loop):**
 ```bash
 # cd to parent directory to keep paths short (spaces in paths cause issues)
 cd "$HOME/OneDrive/10 Business/IT Skills"
 
-# Basic — creates new branch, runs N iterations
-bash ralph-with-beads/scripts/ralph-afk-windows.sh ergofigure-eye-demonstration 10 ergofigure-eye-demonstration/prompt.md
+# Basic — creates new branch, runs N iterations (windows-mcp beads only)
+bash ralph-with-beads/scripts/ralph-afk-windows.sh ergofigure-eye-demonstration 10 ergofigure-eye-demonstration/prompt.md --label windows-mcp
 
 # Continue on existing branch
-bash ralph-with-beads/scripts/ralph-afk-windows.sh ergofigure-eye-demonstration 10 ergofigure-eye-demonstration/prompt.md --branch ralph/afk-20260221_143818
+bash ralph-with-beads/scripts/ralph-afk-windows.sh ergofigure-eye-demonstration 10 ergofigure-eye-demonstration/prompt.md --label windows-mcp --branch ralph/afk-20260221_143818
 
-# Custom prompt (e.g. fix a GH issue instead of beads)
-bash ralph-with-beads/scripts/ralph-afk-windows.sh ergofigure-eye-demonstration 1 path/to/fix-prompt.md
+# Custom prompt (e.g. fix a GH issue — use "all" label since not bead-filtered)
+bash ralph-with-beads/scripts/ralph-afk-windows.sh ergofigure-eye-demonstration 1 path/to/fix-prompt.md --label all
 ```
 
 **No HITL script for Windows yet** — use AFK with 1 iteration.
@@ -183,14 +187,21 @@ Same as Omarchy — logs go to `<project>/ralph-runs/ralph-<timestamp>.log`.
 
 ### Verifying the Setup
 
+**Basic connectivity test:**
 ```bash
 cd "$HOME/OneDrive/10 Business/IT Skills"
-bash ralph-with-beads/scripts/ralph-afk-windows.sh ergofigure-eye-demonstration 1 ralph-with-beads/prompts/diagnostic-test.md
+bash ralph-with-beads/scripts/ralph-afk-windows.sh ergofigure-eye-demonstration 1 ralph-with-beads/prompts/diagnostic-test.md --label all
+```
+
+**MCP GUI test** (confirms windows-mcp Snapshot/Click tools work inside Ralph):
+```bash
+cd "$HOME/OneDrive/10 Business/IT Skills"
+bash ralph-with-beads/scripts/ralph-afk-windows.sh ergofigure-eye-demonstration 1 ralph-with-beads/prompts/diagnostic-mcp.md --label all
 ```
 
 Expected outcome:
 - Script creates a temporary branch, runs 1 iteration
-- Claude prints version info, git status, bd list
+- Claude prints version info (basic) or launches app and takes snapshot (MCP)
 - Outputs `<promise>COMPLETE</promise>`
 - Script pushes branch and exits
 
@@ -211,7 +222,7 @@ git push origin --delete ralph/afk-<timestamp>
 - **Paths with spaces**: Git Bash struggles with spaces in paths when arguments span line breaks. Use `cd` to shorten paths, or use `$HOME` expansion.
 - **Ctrl+C may not kill Claude**: If the script hangs, use `taskkill //F //IM claude.exe` from another terminal.
 - **bd Dolt JSONL changes**: bd v0.55.4 (Dolt backend) may modify `.beads/issues.jsonl` during runs. The push step may fail with "uncommitted changes detected". Restore with `git checkout -- .beads/issues.jsonl` after.
-- **Prompt file is not optional**: If the prompt file argument is lost (e.g. line break splitting args), the script silently defaults to `$PROJECT_DIR/prompt.md`. See [#50](https://github.com/MG674/Ralph-with-beads/issues/50).
+- **Prompt file is required**: All scripts now require the prompt file as a positional argument and error if missing. See [#50](https://github.com/MG674/Ralph-with-beads/issues/50) for context.
 
 ---
 
