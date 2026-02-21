@@ -2,7 +2,7 @@
 
 How to get Ralph running on each machine, verify it works, and operate it day-to-day.
 
-**Status:** Work in progress. Omarchy documented, Windows MCP TBD.
+**Status:** Both machines documented and verified working (2026-02-21).
 
 ---
 
@@ -122,6 +122,108 @@ docker build -t ralph-claude:latest docker/
 
 ---
 
-## Windows (MCP-based)
+## Windows (Native, Git Bash)
 
-TBD — will document the Windows AFK script (`ralph-afk-windows.sh`), MCP prompt template, and visual verification workflow.
+### Architecture
+
+Ralph runs natively on Windows (no Docker). The chain is:
+
+```
+ralph-afk-windows.sh (Git Bash)
+  → auth via ~/.claude/ credentials (Max subscription) or env vars
+  → creates feature branch
+  → claude --dangerously-skip-permissions --model sonnet -p "..."
+      → Claude Code 2.1.50 (npm global install)
+      → Python 3.13.7 (host Python)
+      → bd 0.55.4 (Dolt backend)
+      → MCP servers available (windows-mcp for GUI testing)
+```
+
+### Prerequisites
+
+| Component | Location | Version | Notes |
+|-----------|----------|---------|-------|
+| Claude Code | npm global | 2.1.50 | `npm install -g @anthropic-ai/claude-code` |
+| Auth | `~/.claude/` | Max subscription | OAuth credentials stored by `claude login` |
+| AFK script | `ralph-with-beads/scripts/ralph-afk-windows.sh` | — | Windows-specific (native, no Docker) |
+| bd CLI | `~/.local/bin/bd.exe` | 0.55.4 | Dolt backend. Manual install (npm postinstall fails on ARM) |
+| Python | System | 3.13.7 | Host Python, not containerised |
+| MCP | `~/.claude.json` | windows-mcp | `uvx windows-mcp` — Snapshot, Click, Type, Shortcut, Wait |
+
+### Authentication
+
+Windows uses the Claude Max subscription credentials stored by `claude login`. No environment variable needed — credentials live in `~/.claude/`.
+
+Alternative: set `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` as environment variables.
+
+### Running
+
+**Important:** Cannot run from inside a Claude Code session (nested session detection). Always use a separate terminal.
+
+**AFK (autonomous loop):**
+```bash
+# cd to parent directory to keep paths short (spaces in paths cause issues)
+cd "$HOME/OneDrive/10 Business/IT Skills"
+
+# Basic — creates new branch, runs N iterations
+bash ralph-with-beads/scripts/ralph-afk-windows.sh ergofigure-eye-demonstration 10 ergofigure-eye-demonstration/prompt.md
+
+# Continue on existing branch
+bash ralph-with-beads/scripts/ralph-afk-windows.sh ergofigure-eye-demonstration 10 ergofigure-eye-demonstration/prompt.md --branch ralph/afk-20260221_143818
+
+# Custom prompt (e.g. fix a GH issue instead of beads)
+bash ralph-with-beads/scripts/ralph-afk-windows.sh ergofigure-eye-demonstration 1 path/to/fix-prompt.md
+```
+
+**No HITL script for Windows yet** — use AFK with 1 iteration.
+
+### Logs
+
+Same as Omarchy — logs go to `<project>/ralph-runs/ralph-<timestamp>.log`.
+
+### Verifying the Setup
+
+```bash
+cd "$HOME/OneDrive/10 Business/IT Skills"
+bash ralph-with-beads/scripts/ralph-afk-windows.sh ergofigure-eye-demonstration 1 ralph-with-beads/prompts/diagnostic-test.md
+```
+
+Expected outcome:
+- Script creates a temporary branch, runs 1 iteration
+- Claude prints version info, git status, bd list
+- Outputs `<promise>COMPLETE</promise>`
+- Script pushes branch and exits
+
+Clean up after:
+```bash
+cd ergofigure-eye-demonstration
+git checkout main
+git restore .beads/issues.jsonl
+git branch -D ralph/afk-<timestamp>
+git push origin --delete ralph/afk-<timestamp>
+```
+
+**Verified working:** 2026-02-21. Claude Code 2.1.50, bd 0.55.4, Python 3.13.7 native.
+
+### Known Issues
+
+- **Nested session detection**: `claude -p` refuses to run inside an existing Claude Code session. Always run from a separate terminal. Error: "Claude Code cannot be launched inside another Claude Code session."
+- **Paths with spaces**: Git Bash struggles with spaces in paths when arguments span line breaks. Use `cd` to shorten paths, or use `$HOME` expansion.
+- **Ctrl+C may not kill Claude**: If the script hangs, use `taskkill //F //IM claude.exe` from another terminal.
+- **bd Dolt JSONL changes**: bd v0.55.4 (Dolt backend) may modify `.beads/issues.jsonl` during runs. The push step may fail with "uncommitted changes detected". Restore with `git checkout -- .beads/issues.jsonl` after.
+- **Prompt file is not optional**: If the prompt file argument is lost (e.g. line break splitting args), the script silently defaults to `$PROJECT_DIR/prompt.md`. See [#50](https://github.com/MG674/Ralph-with-beads/issues/50).
+
+---
+
+## Key Differences Between Machines
+
+| Aspect | Omarchy | Windows |
+|--------|---------|---------|
+| Execution | Docker container | Native (Git Bash) |
+| Claude Code | 2.1.42 (in image) | 2.1.50 (npm global) |
+| Python | 3.11.2 (Debian) | 3.13.7 (host) |
+| bd | 0.49.6 (SQLite) | 0.55.4 (Dolt) |
+| Auth | OAuth token env var | Max subscription credentials |
+| MCP | Not available | windows-mcp for GUI testing |
+| Script | `ralph-afk.sh` | `ralph-afk-windows.sh` |
+| Kill stuck process | `docker kill` | `taskkill //F //IM claude.exe` |
