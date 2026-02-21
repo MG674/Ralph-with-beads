@@ -1,4 +1,4 @@
-# Ralph Loop Prompt
+# Ralph Loop Prompt — MCP Visual Validation
 
 You are working on [PROJECT_NAME].
 
@@ -69,7 +69,62 @@ If checks fail:
   4. Output `<verify-fail>one-line summary of the failure</verify-fail>`
   5. STOP — do NOT close the bead, leave it `in_progress` for the next iteration
 
-## STEP 5: SELF-AUDIT (MANDATORY — DO NOT SKIP)
+## STEP 5: MCP VISUAL VALIDATION (FOR GUI BEADS)
+
+If the bead description contains a **Visual Verification** section, perform these steps:
+
+### 5a. Kill stale app instances
+
+```
+powershell -Command "Get-Process python -ErrorAction SilentlyContinue | Where-Object {$_.MainWindowTitle -ne ''} | Stop-Process -Force"
+```
+
+Wait 2 seconds for cleanup.
+
+### 5b. Launch the app
+
+```
+.venv/Scripts/python -m src.app --fake-ble
+```
+
+Wait 5 seconds for the window to render and data to start flowing.
+
+### 5c. Take a snapshot
+
+Use `mcp__windows-mcp__Snapshot` with `use_vision: true` to capture the current desktop state.
+
+### 5d. Verify visual criteria
+
+Check the snapshot against each criterion listed in the bead's **Visual Verification** section. For each criterion:
+- **PASS**: The visual element is clearly present and correct
+- **FAIL**: The visual element is missing, incorrect, or unreadable
+
+### 5e. Handle failures
+
+If ANY visual criterion fails:
+- If this is the first attempt: close the app, fix the issue, return to Step 3
+- If this is the second attempt: commit WIP, document what's wrong, output `<verify-fail>visual validation failed: [description]</verify-fail>`
+
+### 5f. Close the app
+
+```
+powershell -Command "Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force"
+```
+
+Wait 2 seconds for cleanup.
+
+### MCP Tool Allowlist
+
+Only use these MCP tools during visual validation:
+- `mcp__windows-mcp__Snapshot` — capture desktop state + screenshot
+- `mcp__windows-mcp__Click` — click UI elements
+- `mcp__windows-mcp__Type` — type text into fields
+- `mcp__windows-mcp__Shortcut` — keyboard shortcuts (Escape, Alt+F4, etc.)
+- `mcp__windows-mcp__Wait` — pause for rendering
+
+Do NOT use `mcp__windows-mcp__Shell` — use the Bash tool for all command execution.
+
+## STEP 6: SELF-AUDIT (MANDATORY — DO NOT SKIP)
 
 Re-read the bead description and audit EVERY acceptance criterion individually:
 
@@ -78,8 +133,8 @@ Re-read the bead description and audit EVERY acceptance criterion individually:
 3. If ANY criterion is NOT MET:
    - If you can implement it now, return to Step 3
    - If the bead is too large to finish, commit WIP with `in_progress` and `<verify-fail>bead too large — [what remains]</verify-fail>`
-4. Only proceed to Step 6 when ALL criteria show MET
-5. Your close reason (Step 6) must list every criterion and how it was satisfied
+4. Only proceed to Step 7 when ALL criteria show MET
+5. Your close reason (Step 7) must list every criterion and how it was satisfied
 
 WARNING: A `--no-gui`/`--headless` test does NOT satisfy criteria mentioning GUI, visual output, or window display. If the bead says "see scrolling graph" and your only evidence is a headless test, the criterion is NOT MET.
 
@@ -88,7 +143,7 @@ If you are running low on context:
 2. Output `<verify-fail>context window limit approaching — progress committed</verify-fail>`
 3. STOP — leave bead `in_progress` for the next iteration
 
-## STEP 6: COMPLETE THE TASK
+## STEP 7: COMPLETE THE TASK
 
 1. Close the bead: `bd close <id> --reason "what was done"`
 2. If you learned something useful → append to `docs/lessons-learned.md`
@@ -96,7 +151,7 @@ If you are running low on context:
 4. If you discovered new work → `bd create "..." task|bug|feature <priority>`, and link it if related: `bd dep relate <new-id> <original-id>`
 5. Commit all changes: `git add -A && git commit -m "[BD-XXX] Brief description"`
 
-## STEP 7: STOP
+## STEP 8: STOP
 
 Do NOT start another task. One task per iteration.
 
@@ -119,3 +174,4 @@ Output nothing further. The loop script will invoke you again.
 - Guardrails ALWAYS take precedence over lessons-learned.md
 - If a fix seems to require violating a guardrail, STOP and document the conflict
 - Record lessons and guardrails AS SOON AS you hit a problem — do not wait until task completion
+- For GUI beads: visual verification is MANDATORY — headless tests alone do not satisfy visual criteria

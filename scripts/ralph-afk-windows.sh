@@ -1,19 +1,13 @@
 #!/bin/bash
-# ralph-afk.sh - AFK Ralph (autonomous loop, N iterations)
-# Use this once the foundation is solid and tasks are well-defined
-set -e
+# ralph-afk-windows.sh - AFK Ralph for Windows (Git Bash)
+# Runs claude -p natively instead of Docker. MCP servers available.
+# Use for visual phases requiring windows-mcp GUI validation.
+set -eo pipefail
 
-# --- Load OAuth token from file if not in environment ---
-# Survives SSH disconnects without needing to re-source .bashrc
-if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ] && [ -f "$HOME/.claude-oauth-token" ]; then
-    CLAUDE_CODE_OAUTH_TOKEN=$(cat "$HOME/.claude-oauth-token")
-    export CLAUDE_CODE_OAUTH_TOKEN
-fi
-
-# Usage: ./ralph-afk.sh /path/to/project <max-iterations> [prompt-file] [--branch <name>]
+# Usage: ./ralph-afk-windows.sh /path/to/project <max-iterations> [prompt-file] [--branch <name>]
 PROJECT_DIR="${1:-.}"
 if [ -z "$2" ]; then
-    echo "Usage: ./ralph-afk.sh <project-dir> <max-iterations> [prompt-file] [--branch <name>]"
+    echo "Usage: ./ralph-afk-windows.sh <project-dir> <max-iterations> [prompt-file] [--branch <name>]"
     echo "  max-iterations is required (e.g. 10, 15, 30)"
     echo "  --branch <name>: continue on existing branch instead of creating new one"
     exit 1
@@ -26,7 +20,7 @@ else
     PROMPT_FILE="$PROJECT_DIR/prompt.md"
 fi
 
-# Parse optional --branch flag (can appear as $3/$4 or $4/$5)
+# Parse optional --branch flag
 CONTINUE_BRANCH=""
 shift 2
 while [ $# -gt 0 ]; do
@@ -47,7 +41,6 @@ TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 # --- Input Validation ---
 
-# Validate PROJECT_DIR
 if [ ! -d "$PROJECT_DIR" ]; then
     echo "ERROR: Directory not found: $PROJECT_DIR"
     exit 1
@@ -58,63 +51,72 @@ if [ ! -d "$PROJECT_DIR/.git" ]; then
     exit 1
 fi
 
-# Convert relative paths to absolute
+# Convert relative paths to absolute (Git Bash style)
 if [[ ! "$PROJECT_DIR" = /* && "$PROJECT_DIR" != "." ]]; then
     PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
 fi
 
-# Validate max-iterations is a positive integer
 if ! [[ "$MAX_ITERATIONS" =~ ^[0-9]+$ ]] || [ "$MAX_ITERATIONS" -lt 1 ]; then
     echo "ERROR: max-iterations must be a positive integer, got: $MAX_ITERATIONS"
     exit 1
 fi
 
-# Validate PROMPT_FILE exists
 if [ ! -f "$PROMPT_FILE" ]; then
     echo "ERROR: Prompt file not found: $PROMPT_FILE"
     exit 1
 fi
 
-# Convert prompt file to absolute path
 if [[ ! "$PROMPT_FILE" = /* ]]; then
     PROMPT_FILE="$(cd "$(dirname "$PROMPT_FILE")" && pwd)/$(basename "$PROMPT_FILE")"
 fi
 
 # --- Credential Validation ---
-# Supports OAuth token (preferred), Max subscription, and API key auth
+# Windows: credentials come from ~/.claude/ (Max subscription) or env vars
 
 CLAUDE_CREDENTIALS="$HOME/.claude/.credentials.json"
 CLAUDE_CONFIG="$HOME/.claude/config.json"
 if [ ! -f "$CLAUDE_CREDENTIALS" ] && [ ! -f "$CLAUDE_CONFIG" ] && [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
     echo "ERROR: Claude credentials not found."
     echo "  Expected one of:"
-    echo "    - CLAUDE_CODE_OAUTH_TOKEN environment variable (run 'claude setup-token')"
     echo "    - $CLAUDE_CREDENTIALS (Max/Pro subscription — run 'claude login')"
     echo "    - $CLAUDE_CONFIG (API key config)"
     echo "    - ANTHROPIC_API_KEY environment variable"
+    echo "    - CLAUDE_CODE_OAUTH_TOKEN environment variable"
     exit 1
 fi
 
 LOG_FILE="$PROJECT_DIR/ralph-runs/ralph-$TIMESTAMP.log"
 mkdir -p "$PROJECT_DIR/ralph-runs"
-chmod 700 "$PROJECT_DIR/ralph-runs"
 touch "$PROJECT_DIR/ralph-runs/git-audit.log"
 
-echo "=== RALPH AFK — $MAX_ITERATIONS iterations ===" | tee "$LOG_FILE"
+echo "=== RALPH AFK (Windows) — $MAX_ITERATIONS iterations ===" | tee "$LOG_FILE"
 echo "Project: $PROJECT_DIR" | tee -a "$LOG_FILE"
 echo "Prompt: $PROMPT_FILE" | tee -a "$LOG_FILE"
 echo "Started: $(date)" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
-# --- Container Cleanup Trap ---
+# --- Helper: Safe push (refuses main/master) ---
 
-CONTAINER_ID=""
+_safe_push() {
+    if [[ "$BRANCH_NAME" == "main" || "$BRANCH_NAME" == "master" ]]; then
+        echo "ERROR: Cannot push directly to main/master" | tee -a "$LOG_FILE"
+        return 1
+    fi
+    git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE"
+}
+
+# --- Helper: Kill stale python windows ---
+
+_kill_stale_python_windows() {
+    powershell -Command 'Get-Process python -ErrorAction SilentlyContinue | Where-Object {$_.MainWindowTitle -ne ""} | Stop-Process -Force' 2>/dev/null || true
+}
+
+# --- Cleanup Trap ---
+
 cleanup() {
     local exit_code=$?
-    if [ -n "$CONTAINER_ID" ]; then
-        echo "Cleaning up container: $CONTAINER_ID" | tee -a "$LOG_FILE"
-        docker kill "$CONTAINER_ID" 2>/dev/null || true
-    fi
+    echo "Cleaning up stale app instances..." | tee -a "$LOG_FILE"
+    _kill_stale_python_windows
     exit $exit_code
 }
 trap cleanup EXIT INT TERM
@@ -126,12 +128,10 @@ cd "$PROJECT_DIR"
 echo "Syncing from remote..." | tee -a "$LOG_FILE"
 if ! git fetch origin 2>&1 | tee -a "$LOG_FILE"; then
     echo "ERROR: Failed to fetch from origin" | tee -a "$LOG_FILE"
-    echo "Check your network connection and Git credentials." | tee -a "$LOG_FILE"
     exit 1
 fi
 
 if [ -n "$CONTINUE_BRANCH" ]; then
-    # Continue on existing branch
     BRANCH_NAME="$CONTINUE_BRANCH"
     if ! git checkout "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE"; then
         echo "ERROR: Could not checkout branch: $BRANCH_NAME" | tee -a "$LOG_FILE"
@@ -143,14 +143,10 @@ if [ -n "$CONTINUE_BRANCH" ]; then
     fi
     echo "Continuing on branch: $BRANCH_NAME" | tee -a "$LOG_FILE"
 else
-    # Start fresh from main
     if ! git pull --rebase origin main 2>&1 | tee -a "$LOG_FILE"; then
         echo "WARNING: Could not pull from origin/main" | tee -a "$LOG_FILE"
-        echo "You may be on a different branch or have unpushed commits." | tee -a "$LOG_FILE"
         echo "Continuing anyway..." | tee -a "$LOG_FILE"
     fi
-
-    # Create feature branch
     BRANCH_NAME="ralph/afk-$TIMESTAMP"
     git checkout -b "$BRANCH_NAME"
     echo "Created branch: $BRANCH_NAME" | tee -a "$LOG_FILE"
@@ -187,50 +183,34 @@ detect_thrashing() {
     return 1
 }
 
-# --- Docker Args ---
+# --- Stale Window Cleanup ---
 
-DOCKER_ARGS=(
-    --rm
-    --memory=4g
-    --cpus=2
-    --tmpfs "/tmp:rw,nosuid,nodev,size=1g"
-    --tmpfs "/run:rw,nosuid,nodev,size=256m"
-    -v "$(pwd)":/workspace
-    -v "$PROMPT_FILE":/prompt.md:ro
-    -v "$PROJECT_DIR/ralph-runs/git-audit.log":/var/log/git-commands.log
-    -w /workspace
-)
-
-# Auth: OAuth token (preferred for Docker)
-if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
-    DOCKER_ARGS+=(-e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN")
-fi
-# Mount credentials securely (read-only, fallback)
-# Max/Pro subscription: mount OAuth credentials
-if [ -f "$CLAUDE_CREDENTIALS" ]; then
-    DOCKER_ARGS+=(-v "$CLAUDE_CREDENTIALS:/home/node/.claude/.credentials.json:ro")
-fi
-# API key config file
-if [ -f "$CLAUDE_CONFIG" ]; then
-    DOCKER_ARGS+=(-v "$CLAUDE_CONFIG:/home/node/.claude/config.json:ro")
-fi
-# API key via environment variable
-if [ -n "$ANTHROPIC_API_KEY" ]; then
-    DOCKER_ARGS+=(-e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY")
-fi
+kill_stale_app() {
+    echo "Killing stale app instances..." | tee -a "$LOG_FILE"
+    _kill_stale_python_windows
+    sleep 2
+}
 
 # --- Main Loop ---
+
+TIMEOUT_SECONDS=600
 
 for ((i=1; i<=MAX_ITERATIONS; i++)); do
     echo "--- Iteration $i of $MAX_ITERATIONS ---" | tee -a "$LOG_FILE"
     echo "Time: $(date)" | tee -a "$LOG_FILE"
 
-    # Run Claude Code in Docker with timeout
-    # Stream output to log in real-time (visible via tail -f) while capturing for signal detection
+    # Kill any stale app windows from previous iteration
+    kill_stale_app
+
+    # Read prompt file content (prompt files are ~2-5KB; claude -p requires inline text)
+    PROMPT_CONTENT=$(cat "$PROMPT_FILE")
+
+    # Run Claude Code natively (no Docker) with timeout
+    # --dangerously-skip-permissions: non-interactive
+    # --model sonnet: use Sonnet for speed
+    # MCP servers (windows-mcp) are available via ~/.claude.json
     ITER_LOG="$PROJECT_DIR/ralph-runs/.iter-output"
-    timeout 600 docker run "${DOCKER_ARGS[@]}" \
-        ralph-claude:latest \
-        -c "claude --dangerously-skip-permissions --model sonnet -p \"\$(cat /prompt.md)\"" \
+    timeout "$TIMEOUT_SECONDS" claude --dangerously-skip-permissions --model sonnet -p "$PROMPT_CONTENT" \
         2>&1 | tee -a "$LOG_FILE" > "$ITER_LOG" || true
 
     RESULT=$(cat "$ITER_LOG")
@@ -242,17 +222,11 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
         echo "=== RALPH COMPLETE after $i iterations ===" | tee -a "$LOG_FILE"
         echo "Finished: $(date)" | tee -a "$LOG_FILE"
 
-        # Push branch for PR
         echo "Pushing branch for PR..." | tee -a "$LOG_FILE"
-        git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE"
+        _safe_push
 
         echo "" | tee -a "$LOG_FILE"
-        echo "Create PR at: https://github.com/[org]/[repo]/pull/new/$BRANCH_NAME" | tee -a "$LOG_FILE"
-
-        # Send notification if script exists
-        if [ -f "$(dirname "$0")/notify.sh" ]; then
-            bash "$(dirname "$0")/notify.sh" "Ralph COMPLETE on $(basename "$PROJECT_DIR") after $i iterations"
-        fi
+        echo "Branch pushed. Create PR to review progress." | tee -a "$LOG_FILE"
         exit 0
     fi
 
@@ -262,26 +236,19 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
         echo "=== RALPH BLOCKED at iteration $i ===" | tee -a "$LOG_FILE"
         echo "Finished: $(date)" | tee -a "$LOG_FILE"
 
-        # Push whatever progress was made
-        git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE" || true
-
-        if [ -f "$(dirname "$0")/notify.sh" ]; then
-            bash "$(dirname "$0")/notify.sh" "Ralph BLOCKED on $(basename "$PROJECT_DIR") at iteration $i"
-        fi
+        _safe_push || true
         exit 1
     fi
 
     # Extract current failure for thrashing detection
     CURRENT_FAIL=$(echo "$RESULT" | grep -oP '(?<=<verify-fail>).*(?=</verify-fail>)' | tail -1)
 
-    # Track failure history (5-iteration sliding window)
     if [ -n "$CURRENT_FAIL" ]; then
         FAIL_HISTORY+=("$CURRENT_FAIL")
         if (( ${#FAIL_HISTORY[@]} > 5 )); then
             FAIL_HISTORY=("${FAIL_HISTORY[@]:(-5)}")
         fi
 
-        # Check for repeating patterns
         THRASH_MSG=$(detect_thrashing "${FAIL_HISTORY[@]}") || true
         if [ -n "$THRASH_MSG" ]; then
             echo "" | tee -a "$LOG_FILE"
@@ -289,12 +256,7 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
             echo "Failure history: ${FAIL_HISTORY[*]}" | tee -a "$LOG_FILE"
             echo "Finished: $(date)" | tee -a "$LOG_FILE"
 
-            # Push whatever progress was made
-            git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE" || true
-
-            if [ -f "$(dirname "$0")/notify.sh" ]; then
-                bash "$(dirname "$0")/notify.sh" "Ralph THRASHING on $(basename "$PROJECT_DIR") at iteration $i: $THRASH_MSG"
-            fi
+            _safe_push || true
             exit 1
         fi
     fi
@@ -318,10 +280,5 @@ done
 echo "=== RALPH FINISHED — max iterations ($MAX_ITERATIONS) reached ===" | tee -a "$LOG_FILE"
 echo "Finished: $(date)" | tee -a "$LOG_FILE"
 
-# Push whatever progress was made
-git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE" || true
+_safe_push || true
 echo "Branch pushed. Create PR to review progress." | tee -a "$LOG_FILE"
-
-if [ -f "$(dirname "$0")/notify.sh" ]; then
-    bash "$(dirname "$0")/notify.sh" "Ralph finished on $(basename "$PROJECT_DIR") — max iterations reached"
-fi
