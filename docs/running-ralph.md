@@ -509,15 +509,17 @@ Omarchy's SQLite contains old beads from previous naming eras (`ergofigure-eye-d
 
 ```bash
 # On Omarchy — sync and then filter to current prefix only
-docker run --rm -v "$(pwd):/workspace" -w /workspace ralph-claude:latest -c "bd sync"
+docker run --rm -v "$(pwd):/workspace" -w /workspace ralph-claude:latest -c "bd sync" && \
 python3 -c "
-import json
-with open('.beads/issues.jsonl') as f:
+import json, os; inf = '.beads/issues.jsonl'
+
+with open(inf) as f:
     beads = [json.loads(l) for l in f if l.strip()]
 current = [b for b in beads if b['id'].startswith('ergo-')]
-with open('.beads/issues.jsonl', 'w') as f:
+with open(inf + '.tmp', 'w') as f:
     for b in current:
         f.write(json.dumps(b, separators=(',', ':')) + '\n')
+os.replace(inf + '.tmp', inf)
 print(f'Kept {len(current)} ergo-* beads, removed {len(beads) - len(current)} legacy')
 "
 ```
