@@ -168,15 +168,17 @@ All scripts require `--label` to keep machines in their own lanes. Use `windows-
 ```bash
 # cd to parent directory to keep paths short (spaces in paths cause issues)
 cd "$HOME/OneDrive/10 Business/IT Skills"
+S=ralph-with-beads/scripts/ralph-afk-windows.sh
+P=ergofigure-eye-demonstration
 
 # Basic — creates new branch, runs N iterations (windows-mcp beads only)
-bash ralph-with-beads/scripts/ralph-afk-windows.sh ergofigure-eye-demonstration 10 ergofigure-eye-demonstration/prompt.md --label windows-mcp
+bash "$S" "$P" 10 "$P/prompt-mcp.md" --label windows-mcp
 
 # Continue on existing branch
-bash ralph-with-beads/scripts/ralph-afk-windows.sh ergofigure-eye-demonstration 10 ergofigure-eye-demonstration/prompt.md --label windows-mcp --branch ralph/afk-20260221_143818
+bash "$S" "$P" 30 "$P/prompt-mcp.md" --label windows-mcp --branch ralph/afk-20260221_143818
 
 # Custom prompt (e.g. fix a GH issue — use "all" label since not bead-filtered)
-bash ralph-with-beads/scripts/ralph-afk-windows.sh ergofigure-eye-demonstration 1 path/to/fix-prompt.md --label all
+bash "$S" "$P" 1 path/to/fix-prompt.md --label all
 ```
 
 **No HITL script for Windows yet** — use AFK with 1 iteration.
@@ -190,7 +192,9 @@ Same as Omarchy — logs go to `<project>/ralph-runs/ralph-<timestamp>.log`.
 **Basic connectivity test:**
 ```bash
 cd "$HOME/OneDrive/10 Business/IT Skills"
-bash ralph-with-beads/scripts/ralph-afk-windows.sh ergofigure-eye-demonstration 1 ralph-with-beads/prompts/diagnostic-test.md --label all
+S=ralph-with-beads/scripts/ralph-afk-windows.sh
+P=ergofigure-eye-demonstration
+bash "$S" "$P" 1 ralph-with-beads/prompts/diagnostic-test.md --label all
 ```
 
 **MCP GUI test** (confirms windows-mcp Snapshot/Click tools work inside Ralph):
