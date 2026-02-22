@@ -355,7 +355,11 @@ bash verify.sh
 
 This catches Python 3.13 incompatibilities that passed in Docker's Python 3.11 (see "Python 3.13 test failures" below).
 
-### 6. Fix issues and commit
+### 6. Sync bead closures to JSONL
+
+If Ralph closed any beads, verify the closures made it into the JSONL (see "Cross-Platform Beads Synchronisation" below). This is especially important on Omarchy where `bd close` writes to SQLite but not JSONL.
+
+### 7. Fix issues and commit
 
 If any checks above found problems, fix them, commit, and push to the branch before creating the PR.
 
@@ -463,6 +467,85 @@ git branch -D ralph/afk-<timestamp>
 # Delete remote branches
 git push origin --delete ralph/afk-<timestamp>
 ```
+
+---
+
+## Cross-Platform Beads Synchronisation
+
+When running Ralph on both machines, bead statuses can drift out of sync. Each machine has its own local database (SQLite on Omarchy, Dolt on Windows) and the shared JSONL in git is the sync mechanism. **This sync does not happen automatically** — you must verify it.
+
+### The Problem
+
+| Machine | bd version | Backend | Writes to JSONL? |
+|---------|-----------|---------|-------------------|
+| Omarchy (Docker) | 0.49.6 | SQLite | Only via `bd sync` inside Docker |
+| Windows | 0.55.4 | Dolt | Only via `bd sync` |
+
+`bd close` updates the local database but does **not** automatically export to JSONL. If the JSONL isn't synced and committed before merging, the other machine won't see the closures.
+
+**Incident (2026-02-21):** Omarchy Ralph closed 14 beads during PR #65. Closures stayed in SQLite only — the JSONL in git still showed them as open. Windows had no idea they were done.
+
+### After Every Multi-Machine Run: Verify Bead Sync
+
+Add this to the post-AFK checklist whenever both machines have been running beads:
+
+```bash
+# On Omarchy — sync SQLite to JSONL
+docker run --rm -v "$(pwd):/workspace" -w /workspace ralph-claude:latest -c "bd sync"
+
+# On Windows — sync Dolt to JSONL
+bd sync
+
+# Then check the JSONL matches expectations
+grep -c '"status":"closed"' .beads/issues.jsonl
+grep -c '"status":"open"' .beads/issues.jsonl
+```
+
+### Watching for Legacy Duplicates
+
+Omarchy's SQLite contains old beads from previous naming eras (`ergofigure-eye-demonstration-*`, `ergofigure-*`). A naive `bd sync` will dump **all** of them into the JSONL (124 legacy + 33 current in one incident).
+
+**Safe sync approach for Omarchy:** Instead of raw `bd sync`, use a filtered export:
+
+```bash
+# On Omarchy — sync and then filter to current prefix only
+docker run --rm -v "$(pwd):/workspace" -w /workspace ralph-claude:latest -c "bd sync" && \
+python3 -c "
+import json, os; inf = '.beads/issues.jsonl'
+
+with open(inf) as f:
+    beads = [json.loads(l) for l in f if l.strip()]
+current = [b for b in beads if b['id'].startswith('ergo-')]
+with open(inf + '.tmp', 'w') as f:
+    for b in current:
+        f.write(json.dumps(b, separators=(',', ':')) + '\n')
+os.replace(inf + '.tmp', inf)
+print(f'Kept {len(current)} ergo-* beads, removed {len(beads) - len(current)} legacy')
+"
+```
+
+Windows (bd v0.55.4 with Dolt) doesn't have legacy beads in its database, so `bd sync` is safe there.
+
+### Quick Status Check (Either Machine)
+
+```bash
+# Count beads by status in JSONL (works anywhere with grep)
+echo "Closed: $(grep -c '"status":"closed"' .beads/issues.jsonl)"
+echo "Open:   $(grep -c '"status":"open"' .beads/issues.jsonl)"
+echo "WIP:    $(grep -c '"status":"in_progress"' .beads/issues.jsonl)"
+echo "Total:  $(wc -l < .beads/issues.jsonl)"
+```
+
+Expected totals for ergofigure-eye-demonstration: **33 beads** (from BEAD_SPECIFICATIONS.md).
+
+### Merge Order Matters
+
+When both machines have JSONL changes on separate branches, merge them carefully:
+
+1. Merge the first PR (e.g. Omarchy closures)
+2. Rebase the second branch onto updated main: `git pull --rebase origin main`
+3. Resolve any JSONL conflicts (usually just status fields — pick the more-progressed status)
+4. Push and merge the second PR
 
 ---
 
