@@ -162,6 +162,7 @@ echo "" | tee -a "$LOG_FILE"
 # --- Advanced Thrashing Detection ---
 
 declare -a FAIL_HISTORY=()
+declare -a COMMIT_HISTORY=()
 
 detect_thrashing() {
     local -a history=("$@")
@@ -270,6 +271,28 @@ $PROMPT_CONTENT"
             echo "Failure history: ${FAIL_HISTORY[*]}" | tee -a "$LOG_FILE"
             echo "Finished: $(date)" | tee -a "$LOG_FILE"
 
+            _safe_push || true
+            exit 1
+        fi
+    fi
+
+    # Detect stuck iterations: same repo state (commit + working tree) 3 times
+    # Hash both HEAD and uncommitted diff so we catch Ralph re-doing identical
+    # uncommitted work without ever committing (the ergo-537 pattern).
+    COMMIT_SHA=$(cd "$PROJECT_DIR" && git rev-parse HEAD 2>/dev/null || echo "unknown")
+    DIFF_HASH=$(cd "$PROJECT_DIR" && git diff HEAD 2>/dev/null | md5sum | cut -d' ' -f1)
+    CURRENT_STATE="${COMMIT_SHA}:${DIFF_HASH}"
+    COMMIT_HISTORY+=("$CURRENT_STATE")
+    if (( ${#COMMIT_HISTORY[@]} > 5 )); then
+        COMMIT_HISTORY=("${COMMIT_HISTORY[@]:(-5)}")
+    fi
+    if (( ${#COMMIT_HISTORY[@]} >= 3 )); then
+        if [[ "${COMMIT_HISTORY[-1]}" == "${COMMIT_HISTORY[-2]}" ]] && \
+           [[ "${COMMIT_HISTORY[-2]}" == "${COMMIT_HISTORY[-3]}" ]]; then
+            echo "" | tee -a "$LOG_FILE"
+            echo "=== RALPH STUCK — identical repo state in 3 iterations ===" | tee -a "$LOG_FILE"
+            echo "State: ${COMMIT_HISTORY[-1]}" | tee -a "$LOG_FILE"
+            echo "Finished: $(date)" | tee -a "$LOG_FILE"
             _safe_push || true
             exit 1
         fi
