@@ -200,7 +200,9 @@ bash "$S" "$P" 1 ralph-with-beads/prompts/diagnostic-test.md --label all
 **MCP GUI test** (confirms windows-mcp Snapshot/Click tools work inside Ralph):
 ```bash
 cd "$HOME/OneDrive/10 Business/IT Skills"
-bash ralph-with-beads/scripts/ralph-afk-windows.sh ergofigure-eye-demonstration 1 ralph-with-beads/prompts/diagnostic-mcp.md --label all
+S=ralph-with-beads/scripts/ralph-afk-windows.sh
+P=ergofigure-eye-demonstration
+bash "$S" "$P" 1 ralph-with-beads/prompts/diagnostic-mcp.md --label all
 ```
 
 Expected outcome:
