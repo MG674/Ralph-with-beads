@@ -190,6 +190,19 @@ detect_thrashing() {
     return 1
 }
 
+detect_stuck() {
+    local -a history=("$@")
+    if (( ${#history[@]} < 3 )); then return 1; fi
+
+    if [[ "${history[-1]}" == "${history[-2]}" ]] && \
+       [[ "${history[-2]}" == "${history[-3]}" ]]; then
+        echo "identical repo state in 3 iterations"
+        return 0
+    fi
+
+    return 1
+}
+
 # --- Stale Window Cleanup ---
 
 kill_stale_app() {
@@ -286,16 +299,15 @@ $PROMPT_CONTENT"
     if (( ${#COMMIT_HISTORY[@]} > 5 )); then
         COMMIT_HISTORY=("${COMMIT_HISTORY[@]:(-5)}")
     fi
-    if (( ${#COMMIT_HISTORY[@]} >= 3 )); then
-        if [[ "${COMMIT_HISTORY[-1]}" == "${COMMIT_HISTORY[-2]}" ]] && \
-           [[ "${COMMIT_HISTORY[-2]}" == "${COMMIT_HISTORY[-3]}" ]]; then
-            echo "" | tee -a "$LOG_FILE"
-            echo "=== RALPH STUCK — identical repo state in 3 iterations ===" | tee -a "$LOG_FILE"
-            echo "State: ${COMMIT_HISTORY[-1]}" | tee -a "$LOG_FILE"
-            echo "Finished: $(date)" | tee -a "$LOG_FILE"
-            _safe_push || true
-            exit 1
-        fi
+
+    STUCK_MSG=$(detect_stuck "${COMMIT_HISTORY[@]}") || true
+    if [ -n "$STUCK_MSG" ]; then
+        echo "" | tee -a "$LOG_FILE"
+        echo "=== RALPH STUCK — $STUCK_MSG ===" | tee -a "$LOG_FILE"
+        echo "State: ${COMMIT_HISTORY[-1]}" | tee -a "$LOG_FILE"
+        echo "Finished: $(date)" | tee -a "$LOG_FILE"
+        _safe_push || true
+        exit 1
     fi
 
     # Show what changed this iteration
