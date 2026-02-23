@@ -293,13 +293,19 @@ Run through this every time before launching Ralph:
 
 1. **Commit or stash all changes** — unstaged changes cause `git pull --rebase` to fail at script startup
 2. **Verify `.beads/dolt/` is NOT tracked in git** — run `git ls-files .beads/dolt/` (should return nothing). If files are tracked, fix with `git rm -r --cached .beads/dolt/` and update `.beads/.gitignore`
-3. **Check you're on the right branch** (or let the script create a new one)
-4. **Match prompt to label:**
+3. **Verify local DB is in sync with JSONL** (prevents pre-commit hook from corrupting JSONL):
+   ```bash
+   git show HEAD:.beads/issues.jsonl | wc -l   # committed
+   wc -l .beads/issues.jsonl                    # working tree
+   ```
+   If they diverge, reinit before starting (see "The Pre-commit Hook Trap" section).
+4. **Check you're on the right branch** (or let the script create a new one)
+5. **Match prompt to label:**
    - `--label omarchy` → `prompt.md`
    - `--label windows-mcp` → `prompt-mcp.md`
-5. **Ensure venv is clean** — if you recently switched branches, recreate it (see "Stale venv" below)
-6. **Desktop unlocked** (Windows MCP only) — Ralph needs screen access for Snapshot/Click/Type
-7. **Run from a separate terminal** (Windows only) — NOT from inside Claude Code
+6. **Ensure venv is clean** — if you recently switched branches, recreate it (see "Stale venv" below)
+7. **Desktop unlocked** (Windows MCP only) — Ralph needs screen access for Snapshot/Click/Type
+8. **Run from a separate terminal** (Windows only) — NOT from inside Claude Code
 
 ---
 
@@ -616,6 +622,98 @@ When both machines have JSONL changes on separate branches, merge them carefully
 2. Rebase the second branch onto updated main: `git pull --rebase origin main`
 3. Resolve any JSONL conflicts (usually just status fields — pick the more-progressed status)
 4. Push and merge the second PR
+
+
+---
+
+## The Pre-commit Hook Trap (JSONL Corruption)
+
+This is the most common way to corrupt the JSONL. It has caused incidents on PRs #47, #65, and #89.
+
+### Root cause
+
+The beads `pre-commit` hook does this on **every commit**:
+
+```
+1. Export local DB (Dolt on Windows / SQLite on Omarchy) → .beads/issues.jsonl
+2. Stage .beads/issues.jsonl
+```
+
+If the **local DB is stale** (out of sync with the JSONL in git), the hook exports the stale DB and overwrites the correct JSONL before the commit lands. The commit then propagates the corruption to all other machines.
+
+**When is the local DB stale?**
+- After `git checkout` to a branch with a different JSONL (the DB is not auto-updated)
+- After switching machines (each machine has its own DB)
+- After a fresh clone (DB doesn't exist yet)
+- After the other machine's Ralph run added bead closures to the JSONL
+
+**Key invariant:**  
+> Before any commit, the local DB must be in sync with the JSONL in the working tree.
+
+### The golden rule
+
+> **Make any commits to a Ralph branch from the same machine Ralph ran on.**
+
+If Ralph ran on Omarchy, review his work on Omarchy and commit fixes there. Only switch to Windows after the PR is merged and you're back on `main`. This eliminates the stale-DB problem entirely — the machine that ran Ralph has a DB that is in sync with the branch JSONL.
+
+When you must commit on a different machine (e.g. Claude makes a CI fix from Windows on an Omarchy Ralph branch), check JSONL sync first and reinit the DB before committing.
+
+### How to detect a stale DB
+
+```bash
+# Compare HEAD JSONL vs local DB export
+git show HEAD:.beads/issues.jsonl | wc -l     # what's committed
+wc -l .beads/issues.jsonl                       # what's in working tree (may differ from DB)
+
+# Also compare DB export directly
+bd export -o /tmp/current-db.jsonl
+wc -l /tmp/current-db.jsonl                     # what the DB thinks
+```
+
+If the DB export line count is significantly lower than the committed JSONL, the DB is stale.
+
+### Fix: reinit before committing
+
+See **Recovering the Dolt Database** above for the full reinit procedure. Do this before any commit on a branch where the local DB might be stale.
+
+### Last resort: --no-verify
+
+If you need to make a **non-beads** commit (no bead creation, closure, or update) and cannot reinit right now:
+
+```bash
+git commit --no-verify -m "chore: ..."
+git push --no-verify
+```
+
+**Hard constraints:**
+- ONLY for commits with zero beads state changes
+- NEVER for commits that close, create, or update a bead — the JSONL will be permanently wrong
+- Must reinit the DB before the next beads-related commit
+- If the pre-push hook blocks with "uncommitted changes in .beads/issues.jsonl", use `--no-verify` on the push too
+
+### Typical scenario: Omarchy Ralph finished, you commit on Windows
+
+1. Ralph pushed from Omarchy with correct 174-line JSONL
+2. You `git fetch && git checkout ralph/afk-<timestamp>` on Windows
+3. Windows Dolt has 44 lines (stale — doesn't know about Omarchy closures)
+4. You make a small fix and `git commit` — pre-commit hook exports 44 lines and overwrites JSONL
+5. JSONL in commit = 44 lines (corrupted)
+
+**Prevention:** After checkout, check JSONL sync and reinit Dolt before making any commit:
+
+```bash
+git checkout ralph/afk-<timestamp>
+
+# Check sync
+git show HEAD:.beads/issues.jsonl | wc -l   # e.g. 174
+wc -l .beads/issues.jsonl                    # should also be 174
+
+# If they diverge, reinit before committing anything
+rm -rf .beads/dolt/ .beads/dolt-access.lock .beads/metadata.json
+bd init --prefix ergo --from-jsonl
+bd import -i .beads/issues.jsonl
+# Re-add labels if needed (see Recovering the Dolt Database)
+```
 
 ---
 
