@@ -509,9 +509,28 @@ bd import -i .beads/issues.jsonl
 bd list
 ```
 
-### Key Detail
+### Key Details
 
-`bd init --from-jsonl` creates a fresh database structure but does **not** automatically hydrate it from the JSONL. You must run `bd import -i .beads/issues.jsonl` explicitly to populate the database. Without this step, `bd list` returns empty results even though the JSONL has all your issues.
+**Import doesn't populate labels:** `bd init --from-jsonl` creates a fresh database structure but does **not** automatically hydrate it from the JSONL. You must run `bd import -i .beads/issues.jsonl` explicitly to populate the database. Without this step, `bd list` returns empty results even though the JSONL has all your issues.
+
+**Labels require separate setup:** `bd import` does **not** import the `labels` field from JSONL into Dolt's label table. After import, all beads will have empty labels. You must add labels via `bd label add <id> <label>` (one label per call). After adding labels, `bd export` will include them in the JSONL output. To bulk-restore labels after a reinit:
+
+```bash
+# Generate label commands from the JSONL (before Dolt overwrites it)
+git show HEAD:.beads/issues.jsonl | python -c "
+import json, sys, shlex
+for line in sys.stdin:
+    d = json.loads(line)
+    for label in d.get('labels', []):
+        print(f'bd label add {shlex.quote(d[\"id\"])} {shlex.quote(label)}')
+" > /tmp/add-labels.sh
+
+# Run them, then re-export to sync JSONL with Dolt
+bash /tmp/add-labels.sh
+bd export -o .beads/issues.jsonl
+```
+
+**Never roundtrip JSONL through json.loads/json.dumps:** Dolt export produces a specific key ordering and character escaping (e.g. `\u003e` for `>`). A Python `json.loads` → `json.dumps` cycle reorders keys, changes escaping, and can silently drop fields — causing a 100% line diff and data loss. Always use surgical string replacement (e.g. `str.replace()`) for targeted JSONL edits.
 
 ### When This Happens
 
