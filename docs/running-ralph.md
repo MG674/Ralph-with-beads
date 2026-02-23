@@ -477,6 +477,50 @@ git push origin --delete ralph/afk-<timestamp>
 
 ---
 
+## Recovering the Dolt Database (Windows)
+
+After a PR merge that removes `.beads/dolt/` from git tracking (or after any situation where the local Dolt database is corrupt/missing but the JSONL is intact), you need to reinitialize the database from JSONL.
+
+### Symptoms
+
+- `bd list` returns an error about missing `repo_state.json` or database not found
+- `git pull` fails with merge conflicts on `.beads/dolt/` binary files
+- `bd doctor` reports "Fresh clone detected (44 issues in issues.jsonl, no database)"
+
+### Recovery Steps
+
+```bash
+# 1. Back up the JSONL (source of truth)
+cp .beads/issues.jsonl /tmp/issues.jsonl.bak
+
+# 2. Remove corrupt/stale Dolt state
+#    Keep: issues.jsonl, .gitignore, config.yaml, hooks/, README.md
+#    Remove: dolt/, dolt-access.lock, metadata.json
+rm -rf .beads/dolt/ .beads/dolt-access.lock .beads/metadata.json
+
+# 3. Reinitialize — creates a fresh empty Dolt database
+bd init --prefix ergo --from-jsonl
+
+# 4. Import issues from JSONL into the new database
+#    (bd init creates the DB but doesn't auto-import)
+bd import -i .beads/issues.jsonl
+
+# 5. Verify
+bd list
+```
+
+### Key Detail
+
+`bd init --from-jsonl` creates a fresh database structure but does **not** automatically hydrate it from the JSONL. You must run `bd import -i .beads/issues.jsonl` explicitly to populate the database. Without this step, `bd list` returns empty results even though the JSONL has all your issues.
+
+### When This Happens
+
+- After merging a PR that added `.beads/dolt/` to `.gitignore` and ran `git rm -r --cached .beads/dolt/` — the merge deletes the tracked Dolt files, leaving a corrupt local state
+- After a fresh clone of a repo that correctly excludes Dolt from git
+- After any accidental deletion of `.beads/dolt/`
+
+---
+
 ## Cross-Platform Beads Synchronisation
 
 When running Ralph on both machines, bead statuses can drift out of sync. Each machine has its own local database (SQLite on Omarchy, Dolt on Windows) and the shared JSONL in git is the sync mechanism. **This sync does not happen automatically** — you must verify it.
