@@ -266,7 +266,7 @@ mv prompt.md.paused prompt.md
 - **Nested session detection**: `claude -p` refuses to run inside an existing Claude Code session. Always run from a separate terminal. Error: "Claude Code cannot be launched inside another Claude Code session."
 - **Paths with spaces**: Git Bash struggles with spaces in paths when arguments span line breaks. Use `cd` to shorten paths, or use `$HOME` expansion.
 - **Ctrl+C may not kill Claude**: If the script hangs, use `taskkill //F //IM claude.exe` from another terminal.
-- **bd Dolt JSONL changes**: bd v0.55.4 (Dolt backend) may modify `.beads/issues.jsonl` during runs. The push step may fail with "uncommitted changes detected". Restore with `git checkout -- .beads/issues.jsonl` after.
+- **Dolt binaries must NOT be in git**: `.beads/dolt/` is local working state that changes on every `bd` operation. If tracked in git, Dolt binary diffs cause merge conflicts on `git pull --rebase` and create persistent uncommitted changes that trigger Ralph's thrashing detection. **Fix**: ensure `.beads/.gitignore` excludes `dolt/`, `dolt-access.lock`, `ephemeral.sqlite3`, `metadata.json`. Only JSONL, config, hooks, and README should be tracked. See lessons-learned.md for the full incident.
 - **Prompt file is required**: All scripts now require the prompt file as a positional argument and error if missing. See [#50](https://github.com/MG674/Ralph-with-beads/issues/50) for context.
 - **Wrong prompt = no MCP testing**: Incident 2026-02-21 — 5 iterations ran with `prompt.md` instead of `prompt-mcp.md` on `windows-mcp` beads. Ralph completed beads with TDD only, no visual verification. Always double-check the prompt file matches the label.
 
@@ -292,7 +292,8 @@ mv prompt.md.paused prompt.md
 Run through this every time before launching Ralph:
 
 1. **Commit or stash all changes** — unstaged changes cause `git pull --rebase` to fail at script startup
-2. **Check you're on the right branch** (or let the script create a new one)
+2. **Verify `.beads/dolt/` is NOT tracked in git** — run `git ls-files .beads/dolt/` (should return nothing). If files are tracked, fix with `git rm -r --cached .beads/dolt/` and update `.beads/.gitignore`
+3. **Check you're on the right branch** (or let the script create a new one)
 3. **Match prompt to label:**
    - `--label omarchy` → `prompt.md`
    - `--label windows-mcp` → `prompt-mcp.md`

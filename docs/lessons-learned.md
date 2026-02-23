@@ -133,6 +133,14 @@ Accumulated wisdom from development. Consult when working on related areas.
 - **Commit beads changes first**: `git add .beads/issues.jsonl && git commit -m "chore: update beads database"` — if you've run `bd create` or `bd update` manually, the JSONL is unstaged. The AFK script does `git pull --rebase` at start, which fails with unstaged changes. The script logs a warning but continues on a stale base.
 - **Check working tree is clean**: `git status` should show nothing unstaged before running `ralph-afk.sh`
 
+### Dolt Database Must NOT Be Tracked in Git
+- Only `.beads/issues.jsonl` (and `interactions.jsonl`, `config.yaml`, hooks, README) belong in git
+- `.beads/dolt/` is local working state — large binaries (~8MB) that change on every `bd` operation
+- **Tracking Dolt in git causes**: merge conflicts on `git pull --rebase` (binary files can't merge), repo bloat, and Ralph AFK thrashing (stuck iterations because uncommitted Dolt diffs persist across iterations)
+- **Incident (2026-02-23):** Ralph AFK got stuck after 3 iterations — Dolt binary changes from a `bd close` before the run created uncommitted diffs that the script couldn't resolve. Thrashing detection killed the run with zero beads completed.
+- **Fix**: Add `dolt/`, `dolt-access.lock`, `ephemeral.sqlite3`, `metadata.json` to `.beads/.gitignore` and `git rm -r --cached` any already-tracked Dolt files
+- **For new projects**: ensure `.beads/.gitignore` excludes `dolt/` from day one
+
 ### Monitoring AFK Progress
 - Log location: `<project>/ralph-runs/ralph-<timestamp>.log`
 - List logs (newest first): `ls --sort=newest <project>/ralph-runs/ | head -3` (Omarchy uses `eza` aliased to `ls` — standard `ls -lt` won't work)
