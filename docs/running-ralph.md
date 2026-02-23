@@ -491,7 +491,7 @@ After a PR merge that removes `.beads/dolt/` from git tracking (or after any sit
 
 ```bash
 # 1. Back up the JSONL (source of truth)
-cp .beads/issues.jsonl /tmp/issues.jsonl.bak
+cp .beads/issues.jsonl ~/issues.jsonl.bak
 
 # 2. Remove corrupt/stale Dolt state
 #    Keep: issues.jsonl, .gitignore, config.yaml, hooks/, README.md
