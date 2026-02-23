@@ -294,12 +294,12 @@ Run through this every time before launching Ralph:
 1. **Commit or stash all changes** — unstaged changes cause `git pull --rebase` to fail at script startup
 2. **Verify `.beads/dolt/` is NOT tracked in git** — run `git ls-files .beads/dolt/` (should return nothing). If files are tracked, fix with `git rm -r --cached .beads/dolt/` and update `.beads/.gitignore`
 3. **Check you're on the right branch** (or let the script create a new one)
-3. **Match prompt to label:**
+4. **Match prompt to label:**
    - `--label omarchy` → `prompt.md`
    - `--label windows-mcp` → `prompt-mcp.md`
-4. **Ensure venv is clean** — if you recently switched branches, recreate it (see "Stale venv" below)
-5. **Desktop unlocked** (Windows MCP only) — Ralph needs screen access for Snapshot/Click/Type
-6. **Run from a separate terminal** (Windows only) — NOT from inside Claude Code
+5. **Ensure venv is clean** — if you recently switched branches, recreate it (see "Stale venv" below)
+6. **Desktop unlocked** (Windows MCP only) — Ralph needs screen access for Snapshot/Click/Type
+7. **Run from a separate terminal** (Windows only) — NOT from inside Claude Code
 
 ---
 
