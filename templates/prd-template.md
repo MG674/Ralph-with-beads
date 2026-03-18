@@ -58,6 +58,21 @@
 - [How we'll measure if this worked]
 - [Quantifiable criteria where possible]
 
+## Constraints
+
+- **Performance:** [e.g. Must respond within 200ms, handle 1000 concurrent users]
+- **Security:** [e.g. All inputs sanitised, no secrets in logs, OWASP top 10]
+- **Dependencies:** [e.g. No new runtime dependencies, must work with Python 3.11+]
+- **API shape:** [e.g. Must follow existing REST conventions, backwards compatible]
+- **Style:** [e.g. Follow existing patterns in src/api/, max 100 line functions]
+
+## Verification Plan
+
+- [ ] **Demo scenario:** [Walk through the primary user flow end-to-end]
+- [ ] **Manual checks:** [Specific things to verify by hand that automated tests cannot cover]
+- [ ] **Stakeholder review:** [Who needs to sign off and what they should look at]
+- [ ] **Edge cases tested:** [Boundary conditions verified manually or via tests]
+
 ## Risks & Mitigations
 
 | Risk | Impact | Likelihood | Mitigation |

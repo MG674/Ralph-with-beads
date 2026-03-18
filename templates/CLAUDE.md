@@ -26,6 +26,14 @@
 - Type hints on all function signatures
 - Docstrings on public functions
 
+## Key Patterns (Follow These)
+
+| Pattern | Example File | Notes |
+|---------|-------------|-------|
+| [e.g. Data parsing] | [src/parser.py] | [Follow this structure for new parsers] |
+| [e.g. API endpoints] | [src/api/users.py] | [All endpoints follow this pattern] |
+| [e.g. Test fixtures] | [tests/conftest.py] | [Shared fixtures and factories live here] |
+
 ## Documentation (Read When Relevant)
 
 | Document | When to Read |
