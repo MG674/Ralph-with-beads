@@ -52,6 +52,7 @@ Tracer bullets are especially prone to crossing layers. Split into per-layer bea
 Each bead must be completable in one agent session (~10 minutes productive work, less than 50% context window usage).
 
 Rules of thumb:
+
 - 1-3 files touched (ideal)
 - 1-5 acceptance criteria (more than 5 = split warning)
 - Single testable outcome
@@ -103,6 +104,7 @@ Each bead's acceptance criteria MUST include:
 3. **Anti-constraints** — what must NOT be mocked, stubbed, or skipped
 
 Example anti-constraints:
+
 - "Integration test must hit the actual database, not a mock"
 - "GUI criteria require a visible window — headless/dry-run does not satisfy"
 - "Do not use --dry-run to satisfy the deployment criterion"
@@ -141,7 +143,7 @@ Mark beads that can run in parallel (no shared files, no dependency). Mark beads
 
 ### For Each Bead
 
-```
+```markdown
 ### BD-[sequence]: [Title]
 
 **Type**: task | feature | bug
@@ -179,7 +181,7 @@ bd dep add BD-2 BD-1    # BD-2 depends on BD-1
 
 ### Dependency DAG (Text)
 
-```
+```text
 BD-1 (foundation)
 ├── BD-2 (infrastructure)
 │   ├── BD-4 (feature A)

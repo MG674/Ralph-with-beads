@@ -11,6 +11,7 @@ You are working on [PROJECT_NAME].
 ## STEP 0: GUARDRAILS PRE-FLIGHT (MANDATORY)
 
 Before doing ANYTHING else:
+
 1. Read `docs/guardrails.md` — these rules ALWAYS take precedence
 2. Read `docs/lessons-learned.md` — check for relevant patterns
 3. Read `coding-standards.md` if making code changes
@@ -40,19 +41,19 @@ Priority order:
 
 a. **RED**: Write a failing test that captures the acceptance criteria
 
-   - Run the test to confirm it fails
-   - If it passes, your test is wrong or the feature exists
+    - Run the test to confirm it fails
+    - If it passes, your test is wrong or the feature exists
 
 b. **GREEN**: Write the minimum code to make the test pass
 
-   - No more than necessary
-   - Don't anticipate future needs
+    - No more than necessary
+    - Don't anticipate future needs
 
 c. **REFACTOR**: Clean up while tests stay green
 
-   - Follow coding-standards.md
-   - Remove duplication
-   - Improve names
+    - Follow coding-standards.md
+    - Remove duplication
+    - Improve names
 
 ## STEP 4: VERIFY QUALITY
 
@@ -61,6 +62,7 @@ Run `bash verify.sh` (lint, format, type check, tests).
 If ALL checks pass → proceed to Step 5.
 
 If checks fail:
+
 - Fix the issues and run `bash verify.sh` again
 - You get **3 attempts**. If still failing after 3 genuine fix attempts:
   1. Record what you tried and what failed → append to `docs/lessons-learned.md`
@@ -84,6 +86,7 @@ Re-read the bead description and audit EVERY acceptance criterion individually:
 WARNING: A `--no-gui`/`--headless` test does NOT satisfy criteria mentioning GUI, visual output, or window display. If the bead says "see scrolling graph" and your only evidence is a headless test, the criterion is NOT MET.
 
 If you are running low on context:
+
 1. Commit your progress: `git add -A && git commit -m "[BD-XXX] WIP: partial progress, context limit"`
 2. Output `<verify-fail>context window limit approaching — progress committed</verify-fail>`
 3. STOP — leave bead `in_progress` for the next iteration

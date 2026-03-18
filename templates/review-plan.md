@@ -21,6 +21,7 @@ Do NOT generate beads — that is a separate step. Your job is to find gaps, amb
 Check that the plan covers all necessary sections with specifics, not placeholders.
 
 **Required sections** (mark each PRESENT / MISSING / INCOMPLETE):
+
 - [ ] Purpose — what problem does this solve and for whom?
 - [ ] User stories or use cases — who does what and why?
 - [ ] Acceptance criteria — how do we know it's done?
@@ -30,6 +31,7 @@ Check that the plan covers all necessary sections with specifics, not placeholde
 - [ ] Dependencies — what must exist before this work starts?
 
 **Red flags**:
+
 - Sections with only placeholder text ("TBD", "TODO", "will be determined later")
 - Acceptance criteria that only cover the happy path
 - Missing error handling or edge case discussion
@@ -41,6 +43,7 @@ Check that the plan covers all necessary sections with specifics, not placeholde
 Check that architectural decisions are explicit, not left for the agent to guess.
 
 **Review checklist**:
+
 - [ ] Layer boundaries explicitly defined (what belongs where)
 - [ ] Module responsibilities are single-purpose (Topic Scope Test: can each component be described in one sentence without "and"?)
 - [ ] Key decisions documented with rationale (ADR-style: decision + why + consequences)
@@ -50,6 +53,7 @@ Check that architectural decisions are explicit, not left for the agent to guess
 - [ ] Technology choices stated with rationale (not just "use React" but why React)
 
 **Red flags**:
+
 - Implicit architecture — rules that live in tribal knowledge, not the document
 - Undocumented boundary decisions (agents will put business logic in controllers)
 - Components that do two things ("handles authentication AND user profile management")
@@ -64,6 +68,7 @@ Check that architectural decisions are explicit, not left for the agent to guess
 Every acceptance criterion must be machine-testable. If a script cannot verify it, it is not an acceptance criterion — it is a wish.
 
 **For each criterion, check**:
+
 - [ ] Names the signal to check (HTTP status, file exists, test passes, log entry present)
 - [ ] Specifies exact state to verify, not just "it works"
 - [ ] Can be rewritten as an EARS pattern:
@@ -76,6 +81,7 @@ Every acceptance criterion must be machine-testable. If a script cannot verify i
 - [ ] States anti-constraints: what must NOT be mocked, stubbed, or skipped
 
 **Red flags**:
+
 - Vague criteria: "should work", "looks good", "is fast", "handles errors properly"
 - GUI/visual criteria without specifying what to see ("the UI displays correctly")
 - No anti-constraints (agents will use --dry-run, excessive mocking, or stubs to "pass")
@@ -90,6 +96,7 @@ Every acceptance criterion must be machine-testable. If a script cannot verify i
 Check that the plan can be decomposed into beads that an autonomous agent can complete in a single session.
 
 **Review checklist**:
+
 - [ ] Work can be decomposed into beads that each touch a single architectural layer
 - [ ] No features span backend AND frontend in a way that would create oversized beads
 - [ ] Each resulting bead could be completed in one agent session (~10 min, less than 50% context window)
@@ -98,6 +105,7 @@ Check that the plan can be decomposed into beads that an autonomous agent can co
 - [ ] Scope is defined at plan level, not left for runtime filtering (agent should not decide what to skip)
 
 **Red flags**:
+
 - "Tracer bullet" features that cross all layers in one unit — must be split into per-layer beads with dependencies
 - Features described at high level without breakdown guidance ("implement the dashboard")
 - More than 5 acceptance criteria for a single unit of work (split warning)
@@ -112,6 +120,7 @@ Check that the plan can be decomposed into beads that an autonomous agent can co
 Check that a clear build order exists and dependencies are explicit.
 
 **Review checklist**:
+
 - [ ] Critical path is identifiable — what must be built first to unblock the most work?
 - [ ] No circular dependencies between planned components
 - [ ] Parallel-safe work is identifiable (independent modules that can be built simultaneously)
@@ -119,6 +128,7 @@ Check that a clear build order exists and dependencies are explicit.
 - [ ] File overlap between planned units is identifiable (overlapping files must be serialized)
 
 **Red flags**:
+
 - No mention of build order (agents will start with whatever seems easiest)
 - Features that require infrastructure that has not been built yet
 - Multiple features touching the same files without sequencing plan
@@ -133,6 +143,7 @@ Check that a clear build order exists and dependencies are explicit.
 Check that failure modes and boundaries are addressed.
 
 **Review checklist**:
+
 - [ ] Error handling paths specified (what happens when things fail?)
 - [ ] Security boundaries clear (what can be accessed, what cannot)
 - [ ] Non-goals explicitly stated (what we are NOT building)
@@ -141,6 +152,7 @@ Check that failure modes and boundaries are addressed.
 - [ ] External dependencies identified (APIs, services, libraries that may change or fail)
 
 **Red flags**:
+
 - Only happy-path scenarios described
 - Security as an afterthought ("we'll add auth later")
 - No non-goals section (scope will creep during implementation)
@@ -152,7 +164,7 @@ Check that failure modes and boundaries are addressed.
 
 For each pass, provide:
 
-```
+```markdown
 ### Pass N: [Name]
 **Verdict**: PASS / CONCERN / FAIL
 **Findings**:
@@ -168,6 +180,7 @@ For each pass, provide:
 or
 
 **NEEDS REVISION** — one or more FAIL verdicts. List specific items that must be fixed:
+
 1. [item — what to fix and why]
 2. [item]
 

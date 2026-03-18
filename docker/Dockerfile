@@ -14,6 +14,8 @@
 
 FROM node:20
 
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 ARG CLAUDE_CODE_VERSION=latest
 
 # Install base dependencies
@@ -45,7 +47,7 @@ RUN npm install -g @beads/bd playwright
 USER root
 RUN npx playwright install --with-deps chromium && \
     pip3 install --no-cache-dir --break-system-packages \
-        pytest pytest-cov ruff black mypy
+        pytest==8.* pytest-cov==6.* ruff==0.9.* black==25.* mypy==1.15.*
 
 # --- Security: Git wrapper intercepts all git commands via PATH precedence ---
 # /usr/local/bin precedes /usr/bin in PATH, so this wrapper intercepts all git calls.

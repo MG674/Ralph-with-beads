@@ -12,7 +12,7 @@ How to get Ralph running on each machine, verify it works, and operate it day-to
 
 Ralph runs inside Docker on Omarchy. The chain is:
 
-```
+```text
 ralph-afk.sh (host bash)
   → sources CLAUDE_CODE_OAUTH_TOKEN from ~/.bashrc
   → creates feature branch
@@ -47,6 +47,7 @@ The AFK/HITL scripts also check `~/.claude-oauth-token` as a fallback (file-base
 The token is passed into Docker via `-e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"`.
 
 **Important:** When running via `tmux` or non-interactive SSH, `~/.bashrc` may not be sourced. Either:
+
 - `source ~/.bashrc` before running the script, or
 - Store the token in `~/.claude-oauth-token` as well
 
@@ -55,6 +56,7 @@ The token is passed into Docker via `-e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OA
 All scripts require `--label` to keep machines in their own lanes. Use `omarchy` for this machine, `windows-mcp` for Windows, or `all` to disable filtering.
 
 **AFK (autonomous loop):**
+
 ```bash
 # Basic — creates new branch, runs N iterations (omarchy beads only)
 bash ~/projects/ralph-with-beads/scripts/ralph-afk.sh ~/projects/ergofigure-eye-demonstration 10 ~/projects/ergofigure-eye-demonstration/prompt.md --label omarchy
@@ -67,11 +69,13 @@ bash ~/projects/ralph-with-beads/scripts/ralph-afk.sh ~/projects/ergofigure-eye-
 ```
 
 **HITL (single iteration, interactive):**
+
 ```bash
 bash ~/projects/ralph-with-beads/scripts/ralph-hitl.sh ~/projects/ergofigure-eye-demonstration ~/projects/ergofigure-eye-demonstration/prompt.md --label omarchy
 ```
 
 **Via tmux (survives SSH disconnect):**
+
 ```bash
 tmux new -d -s ralph 'source ~/.bashrc && bash ~/projects/ralph-with-beads/scripts/ralph-afk.sh ~/projects/ergofigure-eye-demonstration 10 ~/projects/ergofigure-eye-demonstration/prompt.md --label omarchy'
 ```
@@ -79,6 +83,7 @@ tmux new -d -s ralph 'source ~/.bashrc && bash ~/projects/ralph-with-beads/scrip
 ### Logs
 
 All run logs go to `<project>/ralph-runs/ralph-<timestamp>.log`. Tail live:
+
 ```bash
 tail -f ~/projects/ergofigure-eye-demonstration/ralph-runs/ralph-*.log
 ```
@@ -92,12 +97,14 @@ bash ~/projects/ralph-with-beads/scripts/ralph-afk.sh ~/projects/ergofigure-eye-
 ```
 
 Expected outcome:
+
 - Script creates a temporary branch, runs 1 iteration
 - Claude prints version info, git status, bd list
 - Outputs `<promise>COMPLETE</promise>`
 - Script pushes branch and exits
 
 Check the log for diagnostics. Clean up after:
+
 ```bash
 cd ~/projects/ergofigure-eye-demonstration
 git checkout main
@@ -130,7 +137,7 @@ docker build -t ralph-claude:latest docker/
 
 Ralph runs natively on Windows (no Docker). The chain is:
 
-```
+```text
 ralph-afk-windows.sh (Git Bash)
   → auth via ~/.claude/ credentials (Max subscription) or env vars
   → creates feature branch
@@ -165,6 +172,7 @@ Alternative: set `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` as environment
 All scripts require `--label` to keep machines in their own lanes. Use `windows-mcp` for this machine, `omarchy` for Omarchy, or `all` to disable filtering.
 
 **AFK (autonomous loop):**
+
 ```bash
 # cd to parent directory to keep paths short (spaces in paths cause issues)
 cd "$HOME/OneDrive/10 Business/IT Skills"
@@ -190,6 +198,7 @@ Same as Omarchy — logs go to `<project>/ralph-runs/ralph-<timestamp>.log`.
 ### Verifying the Setup
 
 **Basic connectivity test:**
+
 ```bash
 cd "$HOME/OneDrive/10 Business/IT Skills"
 S=ralph-with-beads/scripts/ralph-afk-windows.sh
@@ -198,6 +207,7 @@ bash "$S" "$P" 1 ralph-with-beads/prompts/diagnostic-test.md --label all
 ```
 
 **MCP GUI test** (confirms windows-mcp Snapshot/Click tools work inside Ralph):
+
 ```bash
 cd "$HOME/OneDrive/10 Business/IT Skills"
 S=ralph-with-beads/scripts/ralph-afk-windows.sh
@@ -206,12 +216,14 @@ bash "$S" "$P" 1 ralph-with-beads/prompts/diagnostic-mcp.md --label all
 ```
 
 Expected outcome:
+
 - Script creates a temporary branch, runs 1 iteration
 - Claude prints version info (basic) or launches app and takes snapshot (MCP)
 - Outputs `<promise>COMPLETE</promise>`
 - Script pushes branch and exits
 
 Clean up after:
+
 ```bash
 cd ergofigure-eye-demonstration
 git checkout main
@@ -248,6 +260,7 @@ Template source for new projects: `ralph-with-beads/templates/prompt-mcp.md`.
 There is no built-in stop file mechanism. To stop Ralph cleanly after the current iteration finishes:
 
 **Rename the prompt file:**
+
 ```bash
 mv prompt.md prompt.md.paused          # or prompt-mcp.md
 ```
@@ -255,6 +268,7 @@ mv prompt.md prompt.md.paused          # or prompt-mcp.md
 **How it works:** The AFK script re-reads the prompt file via `cat` at the start of each iteration. With `set -eo pipefail`, the `cat` failure exits the script immediately — before any new work begins. The current iteration finishes completely (commits, logs, bead closure), then the script dies cleanly at the top of the next iteration.
 
 **Restore when ready to restart:**
+
 ```bash
 mv prompt.md.paused prompt.md
 ```
@@ -294,10 +308,12 @@ Run through this every time before launching Ralph:
 1. **Commit or stash all changes** — unstaged changes cause `git pull --rebase` to fail at script startup
 2. **Verify `.beads/dolt/` is NOT tracked in git** — run `git ls-files .beads/dolt/` (should return nothing). If files are tracked, fix with `git rm -r --cached .beads/dolt/` and update `.beads/.gitignore`
 3. **Verify local DB is in sync with JSONL** (prevents pre-commit hook from corrupting JSONL):
+
    ```bash
    git show HEAD:.beads/issues.jsonl | wc -l   # committed
    wc -l .beads/issues.jsonl                    # working tree
    ```
+
    If they diverge, reinit before starting (see "The Pre-commit Hook Trap" section).
 4. **Check you're on the right branch** (or let the script create a new one)
 5. **Match prompt to label:**
@@ -322,6 +338,7 @@ git diff main -- verify.sh pyproject.toml
 ```
 
 If either file was modified and the changes look Docker-specific, revert them:
+
 ```bash
 git checkout main -- verify.sh pyproject.toml
 git commit -m "fix: revert Docker workarounds in verify.sh/pyproject.toml"
@@ -346,6 +363,7 @@ gh pr view <PR> --repo <owner>/<repo> --comments
 ```
 
 **Gotchas:**
+
 - **Stale diffs**: Gemini sometimes reviews an old diff. Check comment timestamps vs the latest commit timestamp before acting on feedback.
 - **False positives**: Gemini once flagged today's date as a "future date." Always sanity-check before making changes.
 
@@ -633,7 +651,7 @@ This is the most common way to corrupt the JSONL. It has caused incidents on PRs
 
 The beads `pre-commit` hook does this on **every commit**:
 
-```
+```text
 1. Export local DB (Dolt on Windows / SQLite on Omarchy) → .beads/issues.jsonl
 2. Stage .beads/issues.jsonl
 ```
@@ -641,6 +659,7 @@ The beads `pre-commit` hook does this on **every commit**:
 If the **local DB is stale** (out of sync with the JSONL in git), the hook exports the stale DB and overwrites the correct JSONL before the commit lands. The commit then propagates the corruption to all other machines.
 
 **When is the local DB stale?**
+
 - After `git checkout` to a branch with a different JSONL (the DB is not auto-updated)
 - After switching machines (each machine has its own DB)
 - After a fresh clone (DB doesn't exist yet)
@@ -685,6 +704,7 @@ git push --no-verify
 ```
 
 **Hard constraints:**
+
 - ONLY for commits with zero beads state changes
 - NEVER for commits that close, create, or update a bead — the JSONL will be permanently wrong
 - Must reinit the DB before the next beads-related commit
@@ -721,6 +741,7 @@ bd import -i .beads/issues.jsonl
 ### Desktop must be unlocked
 
 MCP tools (Snapshot, Click, Type) interact with the actual Windows desktop. The screen must be:
+
 - Unlocked (not at lock screen)
 - Not asleep
 - Accessible (no full-screen app blocking)

@@ -56,6 +56,7 @@ bd list
 ## Output Format
 
 After creating all beads, provide:
+
 1. Summary of beads created (count by type and priority)
 2. Dependency graph (what blocks what)
 3. Suggested implementation order (based on priorities and dependencies)
