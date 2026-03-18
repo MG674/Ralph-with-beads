@@ -39,7 +39,7 @@ done
 
 # Validate --label is provided
 if [ -z "$MACHINE_LABEL" ]; then
-    echo "ERROR: --label is required (e.g. --label omarchy, --label windows-mcp, --label all)"
+    echo "ERROR: --label is required (e.g. --label omarchy, --label windows-mcp, --label all)" >&2
     exit 1
 fi
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
@@ -47,12 +47,12 @@ TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 # --- Input Validation ---
 
 if [ ! -d "$PROJECT_DIR" ]; then
-    echo "ERROR: Directory not found: $PROJECT_DIR"
+    echo "ERROR: Directory not found: $PROJECT_DIR" >&2
     exit 1
 fi
 
 if [ ! -d "$PROJECT_DIR/.git" ]; then
-    echo "ERROR: Not a git repository: $PROJECT_DIR"
+    echo "ERROR: Not a git repository: $PROJECT_DIR" >&2
     exit 1
 fi
 
@@ -62,12 +62,12 @@ if [[ ! "$PROJECT_DIR" = /* && "$PROJECT_DIR" != "." ]]; then
 fi
 
 if ! [[ "$MAX_ITERATIONS" =~ ^[0-9]+$ ]] || [ "$MAX_ITERATIONS" -lt 1 ]; then
-    echo "ERROR: max-iterations must be a positive integer, got: $MAX_ITERATIONS"
+    echo "ERROR: max-iterations must be a positive integer, got: $MAX_ITERATIONS" >&2
     exit 1
 fi
 
 if [ ! -f "$PROMPT_FILE" ]; then
-    echo "ERROR: Prompt file not found: $PROMPT_FILE"
+    echo "ERROR: Prompt file not found: $PROMPT_FILE" >&2
     exit 1
 fi
 
@@ -81,12 +81,14 @@ fi
 CLAUDE_CREDENTIALS="$HOME/.claude/.credentials.json"
 CLAUDE_CONFIG="$HOME/.claude/config.json"
 if [ ! -f "$CLAUDE_CREDENTIALS" ] && [ ! -f "$CLAUDE_CONFIG" ] && [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
-    echo "ERROR: Claude credentials not found."
-    echo "  Expected one of:"
-    echo "    - $CLAUDE_CREDENTIALS (Max/Pro subscription — run 'claude login')"
-    echo "    - $CLAUDE_CONFIG (API key config)"
-    echo "    - ANTHROPIC_API_KEY environment variable"
-    echo "    - CLAUDE_CODE_OAUTH_TOKEN environment variable"
+    {
+        echo "ERROR: Claude credentials not found."
+        echo "  Expected one of:"
+        echo "    - $CLAUDE_CREDENTIALS (Max/Pro subscription — run 'claude login')"
+        echo "    - $CLAUDE_CONFIG (API key config)"
+        echo "    - ANTHROPIC_API_KEY environment variable"
+        echo "    - CLAUDE_CODE_OAUTH_TOKEN environment variable"
+    } >&2
     exit 1
 fi
 
@@ -101,15 +103,10 @@ echo "Label filter: $MACHINE_LABEL" | tee -a "$LOG_FILE"
 echo "Started: $(date)" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
-# --- Helper: Safe push (refuses main/master) ---
+# --- Source shared helpers ---
 
-_safe_push() {
-    if [[ "$BRANCH_NAME" == "main" || "$BRANCH_NAME" == "master" ]]; then
-        echo "ERROR: Cannot push directly to main/master" | tee -a "$LOG_FILE"
-        return 1
-    fi
-    git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE"
-}
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/ralph-helpers.sh"
 
 # --- Helper: Kill stale python windows ---
 
@@ -133,14 +130,14 @@ cd "$PROJECT_DIR"
 
 echo "Syncing from remote..." | tee -a "$LOG_FILE"
 if ! git fetch origin 2>&1 | tee -a "$LOG_FILE"; then
-    echo "ERROR: Failed to fetch from origin" | tee -a "$LOG_FILE"
+    echo "ERROR: Failed to fetch from origin" | tee -a "$LOG_FILE" >&2
     exit 1
 fi
 
 if [ -n "$CONTINUE_BRANCH" ]; then
     BRANCH_NAME="$CONTINUE_BRANCH"
     if ! git checkout "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE"; then
-        echo "ERROR: Could not checkout branch: $BRANCH_NAME" | tee -a "$LOG_FILE"
+        echo "ERROR: Could not checkout branch: $BRANCH_NAME" | tee -a "$LOG_FILE" >&2
         exit 1
     fi
     if ! git pull --rebase origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE"; then
@@ -159,36 +156,12 @@ else
 fi
 echo "" | tee -a "$LOG_FILE"
 
-# --- Advanced Thrashing Detection ---
+# --- Loop State ---
 
 declare -a FAIL_HISTORY=()
 declare -a COMMIT_HISTORY=()
-
-detect_thrashing() {
-    local -a history=("$@")
-    local len=${#history[@]}
-
-    if (( len < 3 )); then return 1; fi
-
-    # Pattern A: Same failure 3 consecutive times
-    if [[ "${history[-1]}" == "${history[-2]}" ]] && \
-       [[ "${history[-2]}" == "${history[-3]}" ]]; then
-        echo "Same failure in 3 consecutive iterations"
-        return 0
-    fi
-
-    # Pattern B: Alternating failures (A->B->A->B)
-    if (( len >= 4 )); then
-        if [[ "${history[-1]}" == "${history[-3]}" ]] && \
-           [[ "${history[-2]}" == "${history[-4]}" ]] && \
-           [[ "${history[-1]}" != "${history[-2]}" ]]; then
-            echo "Alternating failure pattern detected"
-            return 0
-        fi
-    fi
-
-    return 1
-}
+CONSECUTIVE_EMPTY=0
+MAX_CONSECUTIVE_EMPTY=3
 
 detect_stuck() {
     local -a history=("$@")
@@ -243,6 +216,23 @@ $PROMPT_CONTENT"
 
     RESULT=$(cat "$ITER_LOG")
     rm -f "$ITER_LOG"
+
+    # Detect empty/error output (API failures, timeouts, auth errors)
+    TRIMMED="${RESULT//[[:space:]]/}"
+    if [ -z "$TRIMMED" ]; then
+        CONSECUTIVE_EMPTY=$((CONSECUTIVE_EMPTY + 1))
+        echo "WARNING: Empty output from Claude (attempt $CONSECUTIVE_EMPTY of $MAX_CONSECUTIVE_EMPTY)" | tee -a "$LOG_FILE"
+        if [ "$CONSECUTIVE_EMPTY" -ge "$MAX_CONSECUTIVE_EMPTY" ]; then
+            echo "" | tee -a "$LOG_FILE"
+            echo "=== RALPH ABORTED — $CONSECUTIVE_EMPTY consecutive empty responses (API errors?) ===" | tee -a "$LOG_FILE"
+            echo "Finished: $(date)" | tee -a "$LOG_FILE"
+            _safe_push || true
+            exit 1
+        fi
+        sleep 30
+        continue
+    fi
+    CONSECUTIVE_EMPTY=0
 
     # Check for completion signal
     if echo "$RESULT" | grep -q "<promise>COMPLETE</promise>"; then
