@@ -114,15 +114,10 @@ echo "Label filter: $MACHINE_LABEL" | tee -a "$LOG_FILE"
 echo "Started: $(date)" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
-# --- Helper: Safe push (refuses main/master) ---
+# --- Source shared helpers ---
 
-_safe_push() {
-    if [[ "$BRANCH_NAME" == "main" || "$BRANCH_NAME" == "master" ]]; then
-        echo "ERROR: Cannot push directly to main/master" | tee -a "$LOG_FILE" >&2
-        return 1
-    fi
-    git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE"
-}
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/ralph-helpers.sh"
 
 # --- Container Cleanup Trap ---
 
@@ -175,37 +170,11 @@ else
 fi
 echo "" | tee -a "$LOG_FILE"
 
-# --- Advanced Thrashing Detection ---
+# --- Loop State ---
 
 declare -a FAIL_HISTORY=()
 CONSECUTIVE_EMPTY=0
 MAX_CONSECUTIVE_EMPTY=3
-
-detect_thrashing() {
-    local -a history=("$@")
-    local len=${#history[@]}
-
-    if (( len < 3 )); then return 1; fi
-
-    # Pattern A: Same failure 3 consecutive times
-    if [[ "${history[-1]}" == "${history[-2]}" ]] && \
-       [[ "${history[-2]}" == "${history[-3]}" ]]; then
-        echo "Same failure in 3 consecutive iterations"
-        return 0
-    fi
-
-    # Pattern B: Alternating failures (A->B->A->B)
-    if (( len >= 4 )); then
-        if [[ "${history[-1]}" == "${history[-3]}" ]] && \
-           [[ "${history[-2]}" == "${history[-4]}" ]] && \
-           [[ "${history[-1]}" != "${history[-2]}" ]]; then
-            echo "Alternating failure pattern detected"
-            return 0
-        fi
-    fi
-
-    return 1
-}
 
 # --- Docker Args ---
 
