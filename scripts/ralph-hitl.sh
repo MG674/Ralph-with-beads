@@ -76,12 +76,14 @@ fi
 CLAUDE_CREDENTIALS="$HOME/.claude/.credentials.json"
 CLAUDE_CONFIG="$HOME/.claude/config.json"
 if [ ! -f "$CLAUDE_CREDENTIALS" ] && [ ! -f "$CLAUDE_CONFIG" ] && [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
-    echo "ERROR: Claude credentials not found." >&2
-    echo "  Expected one of:" >&2
-    echo "    - CLAUDE_CODE_OAUTH_TOKEN environment variable (run 'claude setup-token')" >&2
-    echo "    - $CLAUDE_CREDENTIALS (Max/Pro subscription — run 'claude login')" >&2
-    echo "    - $CLAUDE_CONFIG (API key config)" >&2
-    echo "    - ANTHROPIC_API_KEY environment variable" >&2
+    {
+        echo "ERROR: Claude credentials not found."
+        echo "  Expected one of:"
+        echo "    - CLAUDE_CODE_OAUTH_TOKEN environment variable (run 'claude setup-token')"
+        echo "    - $CLAUDE_CREDENTIALS (Max/Pro subscription — run 'claude login')"
+        echo "    - $CLAUDE_CONFIG (API key config)"
+        echo "    - ANTHROPIC_API_KEY environment variable"
+    } >&2
     exit 1
 fi
 
