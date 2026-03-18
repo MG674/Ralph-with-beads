@@ -114,6 +114,16 @@ echo "Label filter: $MACHINE_LABEL" | tee -a "$LOG_FILE"
 echo "Started: $(date)" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
+# --- Helper: Safe push (refuses main/master) ---
+
+_safe_push() {
+    if [[ "$BRANCH_NAME" == "main" || "$BRANCH_NAME" == "master" ]]; then
+        echo "ERROR: Cannot push directly to main/master" | tee -a "$LOG_FILE" >&2
+        return 1
+    fi
+    git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE"
+}
+
 # --- Container Cleanup Trap ---
 
 CONTAINER_ID=""
@@ -270,7 +280,7 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
             echo "" | tee -a "$LOG_FILE"
             echo "=== RALPH ABORTED — $CONSECUTIVE_EMPTY consecutive empty responses (API errors?) ===" | tee -a "$LOG_FILE"
             echo "Finished: $(date)" | tee -a "$LOG_FILE"
-            git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE" || true
+            _safe_push || true
             if [ -f "$(dirname "$0")/notify.sh" ]; then
                 bash "$(dirname "$0")/notify.sh" "Ralph ABORTED on $(basename "$PROJECT_DIR") — $CONSECUTIVE_EMPTY consecutive API errors"
             fi
@@ -289,7 +299,7 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
 
         # Push branch for PR
         echo "Pushing branch for PR..." | tee -a "$LOG_FILE"
-        git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE"
+        _safe_push
 
         echo "" | tee -a "$LOG_FILE"
         echo "Create PR at: https://github.com/[org]/[repo]/pull/new/$BRANCH_NAME" | tee -a "$LOG_FILE"
@@ -308,7 +318,7 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
         echo "Finished: $(date)" | tee -a "$LOG_FILE"
 
         # Push whatever progress was made
-        git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE" || true
+        _safe_push || true
 
         if [ -f "$(dirname "$0")/notify.sh" ]; then
             bash "$(dirname "$0")/notify.sh" "Ralph BLOCKED on $(basename "$PROJECT_DIR") at iteration $i"
@@ -335,7 +345,7 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
             echo "Finished: $(date)" | tee -a "$LOG_FILE"
 
             # Push whatever progress was made
-            git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE" || true
+            _safe_push || true
 
             if [ -f "$(dirname "$0")/notify.sh" ]; then
                 bash "$(dirname "$0")/notify.sh" "Ralph THRASHING on $(basename "$PROJECT_DIR") at iteration $i: $THRASH_MSG"
@@ -364,7 +374,7 @@ echo "=== RALPH FINISHED — max iterations ($MAX_ITERATIONS) reached ===" | tee
 echo "Finished: $(date)" | tee -a "$LOG_FILE"
 
 # Push whatever progress was made
-git push -u origin "$BRANCH_NAME" 2>&1 | tee -a "$LOG_FILE" || true
+_safe_push || true
 echo "Branch pushed. Create PR to review progress." | tee -a "$LOG_FILE"
 
 if [ -f "$(dirname "$0")/notify.sh" ]; then
