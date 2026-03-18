@@ -37,7 +37,7 @@ done
 
 # Validate --label is provided
 if [ -z "$MACHINE_LABEL" ]; then
-    echo "ERROR: --label is required (e.g. --label omarchy, --label windows-mcp, --label all)"
+    echo "ERROR: --label is required (e.g. --label omarchy, --label windows-mcp, --label all)" >&2
     exit 1
 fi
 
@@ -45,12 +45,12 @@ fi
 
 # Validate PROJECT_DIR
 if [ ! -d "$PROJECT_DIR" ]; then
-    echo "ERROR: Directory not found: $PROJECT_DIR"
+    echo "ERROR: Directory not found: $PROJECT_DIR" >&2
     exit 1
 fi
 
 if [ ! -d "$PROJECT_DIR/.git" ]; then
-    echo "ERROR: Not a git repository: $PROJECT_DIR"
+    echo "ERROR: Not a git repository: $PROJECT_DIR" >&2
     exit 1
 fi
 
@@ -61,7 +61,7 @@ fi
 
 # Validate PROMPT_FILE exists
 if [ ! -f "$PROMPT_FILE" ]; then
-    echo "ERROR: Prompt file not found: $PROMPT_FILE"
+    echo "ERROR: Prompt file not found: $PROMPT_FILE" >&2
     exit 1
 fi
 
@@ -76,12 +76,12 @@ fi
 CLAUDE_CREDENTIALS="$HOME/.claude/.credentials.json"
 CLAUDE_CONFIG="$HOME/.claude/config.json"
 if [ ! -f "$CLAUDE_CREDENTIALS" ] && [ ! -f "$CLAUDE_CONFIG" ] && [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
-    echo "ERROR: Claude credentials not found."
-    echo "  Expected one of:"
-    echo "    - CLAUDE_CODE_OAUTH_TOKEN environment variable (run 'claude setup-token')"
-    echo "    - $CLAUDE_CREDENTIALS (Max/Pro subscription — run 'claude login')"
-    echo "    - $CLAUDE_CONFIG (API key config)"
-    echo "    - ANTHROPIC_API_KEY environment variable"
+    echo "ERROR: Claude credentials not found." >&2
+    echo "  Expected one of:" >&2
+    echo "    - CLAUDE_CODE_OAUTH_TOKEN environment variable (run 'claude setup-token')" >&2
+    echo "    - $CLAUDE_CREDENTIALS (Max/Pro subscription — run 'claude login')" >&2
+    echo "    - $CLAUDE_CONFIG (API key config)" >&2
+    echo "    - ANTHROPIC_API_KEY environment variable" >&2
     exit 1
 fi
 
@@ -108,8 +108,8 @@ trap cleanup EXIT INT TERM
 cd "$PROJECT_DIR"
 echo "Syncing from remote..."
 if ! git fetch origin 2>&1; then
-    echo "ERROR: Failed to fetch from origin"
-    echo "Check your network connection and Git credentials."
+    echo "ERROR: Failed to fetch from origin" >&2
+    echo "Check your network connection and Git credentials." >&2
     exit 1
 fi
 
@@ -181,9 +181,13 @@ if [ -n "$LABEL_PREAMBLE" ]; then
     DOCKER_ARGS+=(-e LABEL_PREAMBLE="$LABEL_PREAMBLE")
 fi
 
+# Guardrails preamble injected before the prompt content
+GUARDRAILS_PREAMBLE="IMPORTANT: Read docs/guardrails.md FIRST. Guardrails ALWAYS take precedence over docs/lessons-learned.md. If a fix requires violating a guardrail, STOP and document the conflict."
+
 docker run "${DOCKER_ARGS[@]}" \
+    -e GUARDRAILS_PREAMBLE="$GUARDRAILS_PREAMBLE" \
     ralph-claude:latest \
-    -c 'claude --dangerously-skip-permissions --model sonnet -p "${1}IMPORTANT: Read docs/guardrails.md FIRST. Guardrails ALWAYS take precedence over docs/lessons-learned.md. If a fix requires violating a guardrail, STOP and document the conflict.
+    -c 'claude --dangerously-skip-permissions --model sonnet -p "${1}${GUARDRAILS_PREAMBLE}
 
 $(cat /prompt.md)"' _ "${LABEL_PREAMBLE:+$LABEL_PREAMBLE
 

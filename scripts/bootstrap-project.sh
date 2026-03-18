@@ -15,6 +15,16 @@ set -e
 RALPH_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 GEMINI_INSTALL_ID="96380478"
 
+# Detect Python executable: python3 (Linux/Mac) or python (Windows)
+if command -v python3 &>/dev/null; then
+    PYTHON=python3
+elif command -v python &>/dev/null; then
+    PYTHON=python
+else
+    echo "ERROR: Python is not installed" >&2
+    exit 1
+fi
+
 # --- Helper Functions -------------------------------------------------------
 
 bold()  { printf '\033[1m%s\033[0m' "$1"; }
@@ -47,12 +57,12 @@ prompt_input() {
 
 read_json_key() {
     local file="$1" key="$2"
-    python3 -c "import json,sys; print(json.dumps(json.load(open(sys.argv[1]))[sys.argv[2]]))" "$file" "$key"
+    $PYTHON -c "import json,sys; print(json.dumps(json.load(open(sys.argv[1]))[sys.argv[2]]))" "$file" "$key"
 }
 
 merge_status_checks() {
     local base_json="$1"
-    python3 -c "
+    $PYTHON -c "
 import json, sys
 data = json.loads(sys.argv[1])
 data['required_status_checks'] = {'strict': True, 'contexts': ['lint-and-test']}
@@ -97,7 +107,7 @@ check_prerequisites() {
     echo "$(bold '=== Ralph-with-beads Project Bootstrap ===')"
     echo ""
 
-    for cmd in gh git python3; do
+    for cmd in gh git; do
         if ! command -v "$cmd" &> /dev/null; then
             echo "$(red 'ERROR'): $cmd is not installed."
             exit 1
@@ -343,7 +353,7 @@ substitute_placeholders() {
     for file in CLAUDE.md prompt.md; do
         if [ -f "$file" ]; then
             if grep -q '\[PROJECT_NAME\]' "$file" 2>/dev/null; then
-                python3 -c "
+                $PYTHON -c "
 import sys
 with open(sys.argv[1], 'r') as f:
     content = f.read()
