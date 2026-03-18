@@ -175,6 +175,7 @@ echo "" | tee -a "$LOG_FILE"
 declare -a FAIL_HISTORY=()
 CONSECUTIVE_EMPTY=0
 MAX_CONSECUTIVE_EMPTY=3
+PREV_UNCOMMITTED=""
 
 # --- Docker Args ---
 
@@ -322,6 +323,14 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
             exit 1
         fi
     fi
+
+    # Detect stale uncommitted files (same files left uncommitted across iterations)
+    CURR_UNCOMMITTED=$(git diff --name-only HEAD 2>/dev/null | sort || true)
+    if [ -n "$CURR_UNCOMMITTED" ] && [ "$CURR_UNCOMMITTED" = "$PREV_UNCOMMITTED" ]; then
+        echo "WARNING: Same uncommitted files as previous iteration — possible stuck pattern" | tee -a "$LOG_FILE"
+        echo "Stale files: $CURR_UNCOMMITTED" | tee -a "$LOG_FILE"
+    fi
+    PREV_UNCOMMITTED="$CURR_UNCOMMITTED"
 
     # Show what changed this iteration
     CHANGED=$(git diff --stat HEAD 2>/dev/null || true)

@@ -36,7 +36,7 @@ echo "✓ Type check passed"
 echo ""
 
 echo "=== TESTS + COVERAGE (pytest) ==="
-${PYTHON_PREFIX}pytest --tb=short -q --cov=src --cov-fail-under=80 --cov-report=term-missing
+${PYTHON_PREFIX}pytest --tb=short -q --timeout=60 --cov=src --cov-fail-under=80 --cov-report=term-missing
 echo "✓ Tests passed, coverage >= 80%"
 echo ""
 

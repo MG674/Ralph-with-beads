@@ -93,11 +93,16 @@ If you are running low on context:
 
 ## STEP 6: COMPLETE THE TASK
 
-1. Close the bead: `bd close <id> --reason "what was done"`
+**CRITICAL — `bd close` is MANDATORY. Do NOT skip it.** Without `bd close`, the bead stays open and will be re-assigned in the next iteration, wasting work.
+
+1. Close the bead FIRST: `bd close <id> --reason "criterion-by-criterion close reason"`
+   - The close reason MUST reference each acceptance criterion and how it was satisfied
+   - Verify `bd close` succeeded (check exit code / output)
 2. If you learned something useful → append to `docs/lessons-learned.md`
 3. If you hit a time-wasting problem → add guardrail to `docs/guardrails.md`
 4. If you discovered new work → `bd create "..." task|bug|feature <priority>`, and link it if related: `bd dep relate <new-id> <original-id>`
 5. Commit all changes: `git add -A && git commit -m "[BD-XXX] Brief description"`
+6. Verify the bead is closed: `bd list --status closed --json | grep <id>`
 
 ## STEP 7: STOP
 

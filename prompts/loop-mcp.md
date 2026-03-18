@@ -27,12 +27,13 @@ Priority order:
    - If ALL beads are closed → output `<promise>COMPLETE</promise>` and STOP
    - If some beads are open but ALL are blocked → output `<promise>BLOCKED</promise>` with explanation of what's blocking, and STOP
 
-## STEP 2: UNDERSTAND THE TASK
+## STEP 2: UNDERSTAND AND CLAIM THE TASK
 
-1. Read the bead description carefully
-2. Identify acceptance criteria
-3. Check dependencies and related beads
-4. If the bead is `in_progress` (resumed from previous iteration), check git log and existing code to understand what was already done
+1. Claim the bead: `bd update <id> in_progress` (skip if already `in_progress`)
+2. Read the bead description carefully — identify every acceptance criterion
+3. Read the key files listed in the bead description
+4. Check dependencies and related beads
+5. If the bead is `in_progress` (resumed from previous iteration), check git log and existing code to understand what was already done — do NOT redo completed work
 
 ## STEP 3: IMPLEMENT WITH TDD
 
@@ -153,11 +154,16 @@ If you are running low on context:
 
 ## STEP 7: COMPLETE THE TASK
 
-1. Close the bead: `bd close <id> --reason "what was done"`
+**CRITICAL — `bd close` is MANDATORY. Do NOT skip it.** Without `bd close`, the bead stays open and will be re-assigned in the next iteration, wasting work.
+
+1. Close the bead FIRST: `bd close <id> --reason "criterion-by-criterion close reason"`
+   - The close reason MUST reference each acceptance criterion and how it was satisfied
+   - Verify `bd close` succeeded (check exit code / output)
 2. If you learned something useful → append to `docs/lessons-learned.md`
 3. If you hit a time-wasting problem → add guardrail to `docs/guardrails.md`
 4. If you discovered new work → `bd create "..." task|bug|feature <priority>`, and link it if related: `bd dep relate <new-id> <original-id>`
 5. Commit all changes: `git add -A && git commit -m "[BD-XXX] Brief description"`
+6. Verify the bead is closed: `bd list --status closed --json | grep <id>`
 
 ## STEP 8: STOP
 
