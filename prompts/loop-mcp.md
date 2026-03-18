@@ -101,9 +101,13 @@ Check the snapshot against each criterion listed in the bead's **Visual Verifica
 
 ### 5e. Handle failures
 
-If ANY visual criterion fails:
-- If this is the first attempt: close the app, fix the issue, return to Step 3
-- If this is the second attempt: commit WIP, document what's wrong, output `<verify-fail>visual validation failed: [description]</verify-fail>`
+If ANY visual criterion fails, follow the same 3-strike rule as in Step 4:
+- Fix the issues and return to Step 3 to try again.
+- If it's still failing after 3 genuine fix attempts:
+  1. Record what you tried and what failed in `docs/lessons-learned.md`.
+  2. Commit your progress: `git add -A && git commit -m "[BD-XXX] WIP: visual validation failing"`
+  3. Output `<verify-fail>visual validation failed: [description]</verify-fail>`
+  4. STOP — leave the bead `in_progress`.
 
 ### 5f. Close the app
 
