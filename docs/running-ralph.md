@@ -623,7 +623,6 @@ When both machines have JSONL changes on separate branches, merge them carefully
 3. Resolve any JSONL conflicts (usually just status fields — pick the more-progressed status)
 4. Push and merge the second PR
 
-
 ---
 
 ## The Pre-commit Hook Trap (JSONL Corruption)

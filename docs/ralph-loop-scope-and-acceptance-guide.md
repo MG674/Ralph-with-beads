@@ -99,7 +99,7 @@ An Tran's Ralph analysis states it plainly: "Ralph is a terrible fit when 'done'
 
 The key insight from multiple sources: **acceptance criteria must be machine-verifiable**. The "Good Programmer" Medium article describes it precisely: "acceptance criteria as verifiable checklists, quality gates as shell commands."
 
-#### Hierarchy of Verification (strongest → weakest):
+#### Hierarchy of Verification (strongest to weakest)
 
 1. **Automated tests pass** — Unit, integration, e2e. "The rate at which you can get feedback is your speed limit" (Pocock). Simon Willison notes that a robust test suite gives agents "superpowers."
 
@@ -174,7 +174,7 @@ Osmani's "Your AI coding agents need a manager" article distills the ideal brief
 
 ## Summary Checklist
 
-### Before Starting a Ralph Loop:
+### Before Starting a Ralph Loop
 
 - [ ] Write a high-level SPEC.md (what & why, not how)
 - [ ] Use Plan Mode to let the agent expand and refine the spec
