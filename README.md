@@ -34,6 +34,7 @@ If you adapt this for a multi-user or production environment, consider: Docker s
 ## Quick Start
 
 1. **Set up a new project:**
+
    ```bash
    # Automated (recommended)
    ./scripts/bootstrap-project.sh
@@ -42,11 +43,13 @@ If you adapt this for a multi-user or production environment, consider: Docker s
    ```
 
 2. **Build the Docker image (from repo root):**
+
    ```bash
    docker build -t ralph-claude:latest docker/
    ```
 
 3. **Create your PRD and tasks:**
+
    ```bash
    # Use the planning interview to gather requirements
    # Then create beads from the PRD
@@ -55,10 +58,11 @@ If you adapt this for a multi-user or production environment, consider: Docker s
    ```
 
 4. **Run Ralph:**
+
    ```bash
    # Human-in-the-loop (watch each iteration)
    ./scripts/ralph-hitl.sh /path/to/project
-   
+
    # AFK (autonomous, N iterations)
    ./scripts/ralph-afk.sh /path/to/project 15
    ```

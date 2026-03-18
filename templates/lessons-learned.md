@@ -40,6 +40,7 @@ Accumulated wisdom from development. Consult when working on related areas.
 ## Testing
 
 <!-- Testing patterns, fixture tips, common mistakes -->
+
 - **Verify the technique, not just the output**: When a bead specifies a performance technique, tests should verify the technique is actually used (e.g., assert artist is reused across frames, assert `draw_idle` is not called, verify `set_data` is used instead of creating new artists). Passing tests that only check output will miss technique violations.
 
 ## Tools & Environment

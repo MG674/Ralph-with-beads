@@ -28,7 +28,7 @@ The philosophy: *define what "done" looks like, give the agent small verifiable 
 
 Everything lives in a dedicated repo so it can serve multiple projects.
 
-```
+```text
 ralph-with-beads/
 ├── README.md                    # Quick-start guide
 ├── scripts/
@@ -62,7 +62,7 @@ ralph-with-beads/
 
 Each **project repo** (e.g. `ergofigure-demo`, `ergofigure-api`) contains:
 
-```
+```text
 project-repo/
 ├── CLAUDE.md                    # Project-specific agent instructions
 ├── .beads/                      # Beads issue database (Git-tracked)
@@ -223,6 +223,7 @@ The Docker container has limited access to credentials:
 - **SSH key:** NOT mounted into container (commits use git author config only)
 
 The container **cannot**:
+
 - Modify credential files (mounted read-only)
 - Access the host filesystem beyond `/workspace` and `/tmp`
 - Read `~/.ssh/` directory
@@ -250,16 +251,19 @@ Scripts check for credentials at startup and fail with a clear error if none of 
 #### If a Container is Compromised
 
 Even if an attacker gains shell access inside the container, they can:
+
 - Read Claude auth token from credentials file (read-only)
 - Use Claude CLI to make API calls
 
 They **cannot**:
+
 - Modify git config to add credentials
 - Access GitHub token (not mounted)
 - Access SSH keys (not mounted)
 - Escape container (AppArmor policy prevents it)
 
 **Recovery procedure:**
+
 1. Stop Ralph immediately: `Ctrl+C`
 2. Kill the container: `docker kill <container-id>`
 3. Re-authenticate: run `claude login` (Max/Pro) or rotate API key (Anthropic dashboard)
@@ -286,6 +290,7 @@ docker run ... \
 ```
 
 Then inside container:
+
 ```bash
 claude config set api-key "$CLAUDE_API_KEY"
 ```
@@ -413,6 +418,7 @@ claude -p "Read prd.md. For each user story and acceptance criterion,
 ```
 
 Review the generated beads:
+
 ```bash
 bd list          # See all tasks
 bv               # Visual overview with dependencies
@@ -659,6 +665,7 @@ Tests are the feedback loop that makes Ralph work. Poor tests = poor Ralph outpu
 ### 6.1 Test Quality Principles
 
 **Tests should be:**
+
 - **Fast** — Run in milliseconds, not seconds
 - **Isolated** — No shared state between tests
 - **Repeatable** — Same result every time
@@ -666,6 +673,7 @@ Tests are the feedback loop that makes Ralph work. Poor tests = poor Ralph outpu
 - **Timely** — Written before or with the code (TDD)
 
 **Tests should NOT:**
+
 - Test implementation details (test behavior, not structure)
 - Require external services (mock them)
 - Depend on test execution order
@@ -688,12 +696,14 @@ def test_calculate_average_with_valid_numbers_returns_mean():
 ### 6.3 What to Test
 
 **DO test:**
+
 - Happy path (normal operation)
 - Edge cases (empty input, single item, max values)
 - Error conditions (invalid input, missing data)
 - Boundary conditions (off-by-one, limits)
 
 **DON'T test:**
+
 - Third-party libraries (they have their own tests)
 - Simple getters/setters
 - Private implementation details
@@ -701,11 +711,12 @@ def test_calculate_average_with_valid_numbers_returns_mean():
 
 ### 6.4 Test Naming Convention
 
-```
+```text
 test_<unit>_<scenario>_<expected_result>
 ```
 
 Examples:
+
 - `test_parse_csv_with_empty_file_returns_empty_list`
 - `test_calculate_average_with_single_value_returns_that_value`
 - `test_validate_email_with_missing_at_raises_validation_error`
@@ -793,6 +804,7 @@ test('dashboard chart renders correctly', async ({ page }) => {
 ```
 
 Run with:
+
 ```bash
 npx playwright test --update-snapshots  # First run: create baselines
 npx playwright test                      # Subsequent runs: compare
@@ -809,6 +821,7 @@ Two files enable Ralph to improve itself over time. They use **progressive discl
 When Ralph fails in a specific way, add a guardrail so future iterations avoid it.
 
 **Format:**
+
 ```markdown
 # Guardrails
 
@@ -831,6 +844,7 @@ When Ralph fails in a specific way, add a guardrail so future iterations avoid i
 ```
 
 **When to add:**
+
 - After any failure that took >10 minutes to debug
 - When you discover a non-obvious constraint
 - When a bug recurs
@@ -840,6 +854,7 @@ When Ralph fails in a specific way, add a guardrail so future iterations avoid i
 Patterns, tips, and insights discovered during development.
 
 **Format:**
+
 ```markdown
 # Lessons Learned
 
@@ -874,6 +889,7 @@ CLAUDE.md contains a "table of contents" pointing to docs:
 ```
 
 The agent:
+
 1. Reads CLAUDE.md at session start (always loaded)
 2. Reads guardrails.md at the start of each task (per prompt.md instruction)
 3. Reads lessons-learned.md only when working on related areas
@@ -1146,7 +1162,7 @@ The bootstrap script handles repo creation, org selection, license, scaffolding,
 
 #### Option B: Manual setup
 
-```
+```text
 1.  Create project repo on GitHub
 2.  Clone locally
 3.  cd <repo>
@@ -1164,7 +1180,7 @@ The bootstrap script handles repo creation, org selection, license, scaffolding,
 
 ### Phase 1: Planning (HITL Only)
 
-```
+```text
 1.  Run planning interview (HITL Claude session)
 2.  Create PRD from interview output
 3.  Review PRD for testability
@@ -1177,7 +1193,7 @@ The bootstrap script handles repo creation, org selection, license, scaffolding,
 
 The tracer bullet proves the architecture works end-to-end. Always HITL.
 
-```
+```text
 1.  Identify the thinnest slice that touches every layer
     (e.g., "Read one CSV file, extract one data point, display it")
 2.  Mark tracer bullet beads with priority 1
@@ -1191,7 +1207,7 @@ The tracer bullet proves the architecture works end-to-end. Always HITL.
 
 ### Phase 3: Feature Development (HITL then AFK)
 
-```
+```text
 1.  Create feature PRD
 2.  Generate beads for feature
 3.  git checkout -b ralph/<feature-name>
@@ -1213,7 +1229,7 @@ The tracer bullet proves the architecture works end-to-end. Always HITL.
 
 At the end of any work session:
 
-```
+```text
 1.  All Git changes committed
 2.  Beads status is accurate (bd list shows correct states)
 3.  Any blockers documented in relevant bead
@@ -1222,6 +1238,7 @@ At the end of any work session:
 ```
 
 To resume:
+
 ```bash
 cd your-project
 git fetch origin
@@ -1234,7 +1251,7 @@ bv                            # Visual overview
 
 When a project reaches completion or a major milestone, run the close-out process to feed learnings back into the framework.
 
-```
+```text
 1.  Run closeout-review.sh against the project
       ./scripts/closeout-review.sh /path/to/project
 2.  Review all agent-recorded learnings (not just recent)
@@ -1266,11 +1283,13 @@ See `templates/closeout-checklist.md` for the full structured checklist.
 **Short answer:** No, if you're using Beads properly.
 
 **Beads replaces progress.txt** for task tracking. Each bead has:
+
 - Status (open/in_progress/closed)
 - Close message (what was done)
 - Git history (when it was done)
 
 **When you might still want progress.txt:**
+
 - Iteration-level notes within a single task
 - Debug logs for troubleshooting Ralph behavior
 - Session notes that don't fit in beads
@@ -1302,6 +1321,7 @@ Cross-reference with [11 Tips for AI Coding with Ralph Wiggum](https://www.aiher
 ## 13. Key Resources
 
 ### Ralph Wiggum Technique
+
 - [Geoffrey Huntley — Ralph Wiggum as a "software engineer"](https://ghuntley.com/ralph/) — Original creator's philosophy, "signs on the playground" metaphor
 - [Geoffrey Huntley — how-to-ralph-wiggum](https://github.com/ghuntley/how-to-ralph-wiggum) — Comprehensive playbook
 - [Dev Interrupted — Inventing the Ralph Wiggum Loop](https://devinterrupted.substack.com/p/inventing-the-ralph-wiggum-loop-creator) — Deep dive podcast with Geoffrey Huntley
@@ -1310,21 +1330,25 @@ Cross-reference with [11 Tips for AI Coding with Ralph Wiggum](https://www.aiher
 - [Awesome Ralph](https://github.com/snwfdhmp/awesome-ralph) — Curated resource list
 
 ### Beads Task Management
+
 - [Steve Yegge — Beads](https://github.com/steveyegge/beads) — Git-backed issue tracker for AI agents
 - [Beads Viewer (bv)](https://github.com/Dicklesworthstone/beads_viewer) — Terminal UI with dependency graphs
 
 ### Testing & UI Verification
+
 - [Playwright MCP](https://github.com/anthropics/claude-code/tree/main/mcp-servers/playwright) — Browser automation for Claude
 - [Building an AI QA Engineer with Claude Code and Playwright MCP](https://alexop.dev/posts/building_ai_qa_engineer_claude_code_playwright/) — Visual testing workflow
 - [Playwright Skill for Claude Code](https://github.com/lackeyjb/playwright-skill) — Model-invoked automation
 
 ### Context Engineering & Skills
+
 - [Anthropic — Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) — Official guidance
 - [Anthropic — Agent Skills Best Practices](https://docs.claude.com/en/docs/agents-and-tools/agent-skills/best-practices) — Progressive disclosure patterns
 - [Stop Bloating Your CLAUDE.md](https://alexop.dev/posts/stop-bloating-your-claude-md-progressive-disclosure-ai-coding-tools/) — Practical progressive disclosure
 - [Writing a Good CLAUDE.md](https://www.humanlayer.dev/blog/writing-a-good-claude-md) — HumanLayer's guide
 
 ### Development Philosophy
+
 - [The Pragmatic Programmer](https://pragprog.com/titles/tpp20/the-pragmatic-programmer-20th-anniversary-edition/) — Tracer bullets, DRY, and other timeless practices (Chapter 2: "Tracer Bullets")
 - [Test-Driven Development by Example](https://www.amazon.com/Test-Driven-Development-Kent-Beck/dp/0321146530) — Kent Beck's TDD guide
 
@@ -1333,6 +1357,7 @@ Cross-reference with [11 Tips for AI Coding with Ralph Wiggum](https://www.aiher
 ## 14. Quick Reference Checklist
 
 **Starting a new project:**
+
 - [ ] Run `./scripts/bootstrap-project.sh` (or manual Phase 0)
 - [ ] Review and customise CLAUDE.md
 - [ ] Run planning interview
@@ -1345,6 +1370,7 @@ Cross-reference with [11 Tips for AI Coding with Ralph Wiggum](https://www.aiher
 - [ ] Review, PR, merge, repeat
 
 **Resuming work:**
+
 - [ ] `git fetch && git pull`
 - [ ] `bd ready` — what's next?
 - [ ] `bv` — visual status
@@ -1352,12 +1378,14 @@ Cross-reference with [11 Tips for AI Coding with Ralph Wiggum](https://www.aiher
 - [ ] Run ralph-hitl.sh or ralph-afk.sh
 
 **After each iteration:**
+
 - [ ] verify.sh passes
 - [ ] Bead closed with message
 - [ ] Changes committed
 - [ ] Lessons/guardrails updated if needed
 
 **Closing out a project:**
+
 - [ ] Run `./scripts/closeout-review.sh /path/to/project`
 - [ ] Review ALL agent-recorded learnings
 - [ ] Promote universal learnings to framework (branch + PR)

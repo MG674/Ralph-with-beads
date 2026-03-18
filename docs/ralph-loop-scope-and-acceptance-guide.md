@@ -19,6 +19,7 @@ The best-practice workflow has two stages:
 #### Stage 1: Write a High-Level Spec (SPEC.md)
 
 Start with a concise "product brief" covering:
+
 - **Who** is the user?
 - **What** do they need?
 - **What does success look like?**
@@ -57,6 +58,7 @@ Addy Osmani reinforces this: "A crucial lesson I've learned is to avoid asking t
 The Tweag "Introduction to Agentic Coding" guide adds: "pick something atomic that you understand deeply... Before touching any AI tool, write an implementation plan that defines your goals, constraints, and step-by-step approach."
 
 > **Sources:**
+>
 > - [ralph-wiggum (harrymunro)](https://github.com/harrymunro/ralph-wiggum)
 > - [My LLM coding workflow going into 2026](https://addyosmani.com/blog/ai-coding-workflow/) — Addy Osmani
 > - [Introduction to Agentic Coding](https://www.tweag.io/blog/2025-10-23-agentic-coding-intro/) — Tweag/Modus Create
@@ -84,6 +86,7 @@ Since your first project is a **front-end demo for a wearable device** building 
 ### The Stop Condition Problem
 
 Matt Pocock identifies **two core problems** with Ralph loops:
+
 1. The agent picks tasks that are too large
 2. The agent doesn't know when to stop
 
@@ -92,6 +95,7 @@ The PRD-based approach solves both. But the quality of your **acceptance criteri
 An Tran's Ralph analysis states it plainly: "Ralph is a terrible fit when 'done' is fuzzy or risky. Ambiguous product/design decisions will cause the loop to thrash because there's no crisp win condition."
 
 > **Sources:**
+>
 > - [Matt Pocock on X](https://x.com/mattpocockuk/status/2007924876548637089)
 > - [Ralph Wiggum loop](https://antran.app/2026/ralph_wiggum/) — An Tran
 
@@ -114,6 +118,7 @@ The key insight from multiple sources: **acceptance criteria must be machine-ver
 6. **Self-audit prompts** — Instruct the agent: "After implementing, compare the result with the spec and confirm all requirements are met. List any spec items that are not addressed."
 
 > **Sources:**
+>
 > - [The Ralph Wiggum pattern](https://thegoodprogrammer.medium.com/the-ralph-wiggum-pattern-automation-and-persistence-for-coding-agents-4e8fa6f81dff) — The Good Programmer, Jan 2026
 > - [How to write a good spec for AI agents](https://addyosmani.com/blog/good-spec/) — Addy Osmani
 > - [Self-Improving Coding Agents](https://addyosmani.com/blog/self-improving-agents/) — Addy Osmani

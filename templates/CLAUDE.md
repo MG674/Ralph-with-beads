@@ -1,9 +1,11 @@
 # CLAUDE.md — [PROJECT_NAME]
 
 ## Project Overview
+
 [Brief description of what this project does]
 
 ## Tech Stack
+
 - Language: Python >=3.11
 - Testing: pytest
 - Linting: ruff
@@ -13,6 +15,7 @@
 ## Quick Reference
 
 ### Commands
+
 - `bash verify.sh` — Run all quality checks (MUST pass before committing)
 - `bd ready` — Find next task to work on
 - `bd close <id> --reason "message"` — Complete a task
@@ -21,6 +24,7 @@
 - `black .` — Format
 
 ### Quality Standards
+
 - All code must have tests (target 80%+ coverage)
 - All code must pass verify.sh
 - Type hints on all function signatures
@@ -45,12 +49,14 @@
 | coding-standards.md | When refactoring or reviewing style |
 
 ## Git Workflow
+
 - Work on branch: ralph/<feature-name>
 - Commit message format: `[BD-XXX] Brief description`
 - All commits must pass verify.sh
 - NEVER commit directly to main/master
 
 ## Beads Workflow
+
 1. `bd ready` — find next task
 2. `bd update <id> in_progress` — claim it
 3. Read the bead description — identify every acceptance criterion

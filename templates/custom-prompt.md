@@ -9,6 +9,7 @@ You are working on [PROJECT_NAME].
 ## STEP 0: GUARDRAILS PRE-FLIGHT (MANDATORY)
 
 Before doing ANYTHING else:
+
 1. Read `docs/guardrails.md` — these rules ALWAYS take precedence
 2. Read `docs/lessons-learned.md` — check for relevant patterns
 3. Read `coding-standards.md` if making code changes
@@ -30,12 +31,14 @@ Do NOT pick up new beads or run `bd ready` — only do what is described in this
 ## STEP 2: VERIFY
 
 After making changes:
+
 1. Run `bash verify.sh` — all checks MUST pass
 2. Ensure all existing tests still pass (do NOT delete or weaken tests)
 3. If new code was added, ensure it has tests (target 80%+ coverage)
 4. Commit with message: `[BD-XXX] Brief description`
 
 If verify.sh fails:
+
 - Fix the issues and run `bash verify.sh` again
 - You get **3 attempts**. If still failing after 3 genuine fix attempts:
   1. Record what you tried and what failed → append to `docs/lessons-learned.md`

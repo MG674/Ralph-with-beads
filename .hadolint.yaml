@@ -3,13 +3,7 @@ ignored:
   - DL3016
   # Consecutive RUNs are kept separate for logical grouping and cache layers
   - DL3059
-  # Dev image — pinning apt versions makes Dockerfile brittle for no gain
+  # Dev image — pinning apt versions makes Dockerfile brittle (versions rotate
+  # out of repos frequently, breaking builds). Acceptable trade-off for a
+  # local dev/CI image that is rebuilt regularly.
   - DL3008
-  # Dev image — extra packages are acceptable
-  - DL3015
-  # Dev image — pipefail not needed for simple curl|sh pattern
-  - DL4006
-  # Dev image — pinning pip versions adds maintenance burden
-  - DL3013
-  # Dev image — pip cache is fine in a build context
-  - DL3042
