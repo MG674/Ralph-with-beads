@@ -69,6 +69,7 @@
 ## Verification Plan
 
 - [ ] **Demo scenario:** [Walk through the primary user flow end-to-end]
+- [ ] **Automated test results:** [Link to passing CI run, summary of new test coverage]
 - [ ] **Manual checks:** [Specific things to verify by hand that automated tests cannot cover]
 - [ ] **Stakeholder review:** [Who needs to sign off and what they should look at]
 - [ ] **Edge cases tested:** [Boundary conditions verified manually or via tests]
