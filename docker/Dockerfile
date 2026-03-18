@@ -47,7 +47,7 @@ RUN npm install -g @beads/bd playwright
 USER root
 RUN npx playwright install --with-deps chromium && \
     pip3 install --no-cache-dir --break-system-packages \
-        pytest==8.* pytest-cov==6.* ruff==0.9.* black==25.* mypy==1.15.*
+        pytest==8.* pytest-cov==6.* pytest-timeout==2.* ruff==0.9.* black==25.* mypy==1.15.*
 
 # --- Security: Git wrapper intercepts all git commands via PATH precedence ---
 # /usr/local/bin precedes /usr/bin in PATH, so this wrapper intercepts all git calls.
