@@ -61,7 +61,7 @@ Accumulated wisdom from development. Consult when working on related areas.
 
 ### sys.modules mocking must use patch.dict, never module-level assignment
 
-- Module-level `sys.modules["foo"] = mock` runs at pytest COLLECTION time, polluting all tests
+- Module-level `sys.modules["foo"] = mock` runs at pytest COLLECTION time, making the mock visible to every test in the session (breaks test isolation and causes unexpected side effects in unrelated tests)
 - Use `with patch.dict(sys.modules, {...}):` inside test functions/fixtures instead
 - If you need a mock for a module-level import, save/inject/import/restore immediately
 - Source: wiring AFK run — permanent matplotlib mock broke visual regression tests

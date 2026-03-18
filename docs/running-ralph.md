@@ -46,9 +46,9 @@ The AFK/HITL scripts also check `~/.claude-oauth-token` as a fallback (file-base
 
 The token is passed into Docker via `-e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"`.
 
-**Important:** When running via `tmux` or non-interactive SSH, `~/.bashrc` may not be sourced. Either:
+**Important:** When running via `tmux` or non-interactive SSH, `~/.bashrc` (or `~/.zshrc` for zsh users) may not be sourced. Either:
 
-- `source ~/.bashrc` before running the script, or
+- `source ~/.bashrc` (or `~/.zshrc`) before running the script, or
 - Store the token in `~/.claude-oauth-token` as well
 
 ### Running

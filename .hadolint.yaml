@@ -3,5 +3,7 @@ ignored:
   - DL3016
   # Consecutive RUNs are kept separate for logical grouping and cache layers
   - DL3059
-  # Dev image — pinning apt versions makes Dockerfile brittle across base image updates
+  # Dev image — pinning apt versions makes Dockerfile brittle (versions rotate
+  # out of repos frequently, breaking builds). Acceptable trade-off for a
+  # local dev/CI image that is rebuilt regularly.
   - DL3008

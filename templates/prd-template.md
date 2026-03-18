@@ -72,11 +72,11 @@
 
 ## Constraints
 
-- **Performance:** [e.g. Must respond within 200ms, handle 1000 concurrent users]
-- **Security:** [e.g. All inputs sanitised, no secrets in logs, OWASP top 10]
-- **Dependencies:** [e.g. No new runtime dependencies, must work with Python 3.11+]
-- **API shape:** [e.g. Must follow existing REST conventions, backwards compatible]
-- **Style:** [e.g. Follow existing patterns in src/api/, max 100 line functions]
+- **Performance:** [e.g. Must respond within 200ms, handle 1000 concurrent users] — why: [user experience, SLA]
+- **Security:** [e.g. All inputs sanitised, no secrets in logs, OWASP top 10] — why: [compliance, trust]
+- **Dependencies:** [e.g. No new runtime dependencies, must work with Python 3.11+] — why: [deployment stability]
+- **API shape:** [e.g. Must follow existing REST conventions, backwards compatible] — why: [client compatibility]
+- **Style:** [e.g. Follow existing patterns in src/api/, max 100 line functions] — why: [maintainability]
 
 ## Verification Plan
 
