@@ -328,7 +328,7 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
     CURR_UNCOMMITTED=$(git diff --name-only HEAD 2>/dev/null | sort)
     if [ -n "$CURR_UNCOMMITTED" ] && [ "$CURR_UNCOMMITTED" = "$PREV_UNCOMMITTED" ]; then
         echo "WARNING: Same uncommitted files as previous iteration — possible stuck pattern" | tee -a "$LOG_FILE"
-        echo "Stale files: $CURR_UNCOMMITTED" | tee -a "$LOG_FILE"
+        printf "Stale files:\n%s\n" "$CURR_UNCOMMITTED" | tee -a "$LOG_FILE"
     fi
     PREV_UNCOMMITTED="$CURR_UNCOMMITTED"
 

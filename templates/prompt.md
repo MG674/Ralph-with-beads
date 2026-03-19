@@ -102,7 +102,7 @@ If you are running low on context:
 3. If you hit a time-wasting problem → add guardrail to `docs/guardrails.md`
 4. If you discovered new work → `bd create "..." task|bug|feature <priority>`, and link it if related: `bd dep relate <new-id> <original-id>`
 5. Commit all changes: `git add -A && git commit -m "[BD-XXX] Brief description"`
-6. Verify the bead is closed: `bd list --status closed --json | grep -E '"id":\s*"<id>"'`
+6. Verify the bead is closed: `bd list --status closed --json | jq -e --arg id <id> 'any(.[] | .id == $id)'`
 
 ## STEP 7: STOP
 
